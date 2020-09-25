@@ -10,3 +10,4 @@ O código é escrito na linguagem verilog e descreve o comportamento de duas org
 |I2OI|in-order|in-order|out-of-order|in-order
 
 
+
