@@ -7,12 +7,12 @@ SIM=vvp
 #visualizador de onda
 WAV=gtkwave
 
-all: run
+all: compile
 
-design: *.v
+compile: ../*.v
 	$(COM) -Wall $^ -o $@.vvp
 
-run: design
+run: compile
 	$(SIM) $^.vvp
 
 wave: run
