@@ -1,4 +1,4 @@
-module decode 
+module Decode 
 (
 	input [31:0] inst, writedata, 
 	input clk, 
@@ -22,9 +22,9 @@ module decode
 	assign rd     = inst[11:7];
 	assign funct = {inst[31:25],inst[14:12]};
 
-	ControlUnit control (opcode, inst, alusrc, memtoreg, regwrite, memread, memwrite, branch, aluop, ImmGen);
+	Controle control (opcode, inst, alusrc, memtoreg, regwrite, memread, memwrite, branch, aluop, ImmGen);
 
-	Register_Bank Registers (clk, regwrite, rs1, rs2, rd, writedata, data1, data2); 
+	ARF registradores (clk, regwrite, rs1, rs2, rd, writedata, data1, data2); 
 
 endmodule
 

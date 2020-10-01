@@ -1,4 +1,4 @@
-module ControlUnit 
+module Controle 
 (
 	input [6:0] opcode, 
 	input [31:0] inst, 

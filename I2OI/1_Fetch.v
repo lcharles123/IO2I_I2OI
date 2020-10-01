@@ -9,13 +9,13 @@ module Fetch
 	wire [31:0] PC, PC_4, newPC;
 
 	assign PC_4 = PC + 4; // pc+4  Adder
-	assign newPC = (branch & zero) ? pc_4 + sigext : pc_4; // desvia se for um branch beq for true
+	assign newPC = (branch & zero) ? PC_4 + sigext : PC_4; // desvia se for um branch beq for true
 
-	PC program_counter(new_pc, clk, rst, pc);
+	PC program_counter(newPC, clk, rst, PC);
 
 	reg [31:0] inst_mem [0:31];
 
-	assign inst = inst_mem[pc[31:2]];
+	assign inst = inst_mem[PC[31:2]];
 
 	initial
 	begin

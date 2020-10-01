@@ -1,4 +1,12 @@
-module execute (input [31:0] in1, in2, ImmGen, input alusrc, input [1:0] aluop, input [9:0] funct, output zero, output [31:0] aluout);
+module Execute_ALU 
+(
+	input [31:0] in1, in2, ImmGen, 
+	input alusrc, input [1:0] aluop, 
+	input [9:0] funct, 
+	
+	output zero, 
+	output [31:0] aluout
+);
 
   wire [31:0] alu_B;
   wire [3:0] aluctrl;

@@ -9,5 +9,6 @@ O código é escrito na linguagem verilog e descreve o comportamento de duas org
 |IO2I|in-order|out-of-order|out-of-order|in-order
 |I2OI|in-order|in-order|out-of-order|in-order
 
+# Usando o repositorio:
 
-
+Usar o Makefile que se encontra na pasta tb

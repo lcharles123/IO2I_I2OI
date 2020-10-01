@@ -1,4 +1,11 @@
-module Register_Bank (input clk, regwrite, input [4:0] read_reg1, read_reg2, writereg, input [31:0] writedata, output [31:0] read_data1, read_data2);
+module ARF 
+(
+	input clk, regwrite, 
+	input [4:0] read_reg1, read_reg2, writereg, 
+	input [31:0] writedata, 
+	
+	output [31:0] read_data1, read_data2
+);
 
 	integer i;
 	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
@@ -6,7 +13,7 @@ module Register_Bank (input clk, regwrite, input [4:0] read_reg1, read_reg2, wri
 	// fill the memory
 	initial 
 	begin
-		for (i = 0; i <= 31; i++) 
+		for (i = 0; i <= 31; i=i+1) 
 			memory[i] <= i;
 	end
 
