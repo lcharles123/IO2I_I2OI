@@ -5,8 +5,7 @@ module tb();
 	
 	initial
 	begin
-		#0 clk <= 0; rst <= 0;
-		#1 rst <= 1;
+		#0 clk <= 0; rst <= 1;
 	end
 	
 	always #1 clk = ~clk;
@@ -15,8 +14,8 @@ module tb();
 
 	initial 
 	begin
-        $dumpfile("dump.vcd"); //gerar arquivo de forma de onda, para ser usado no gtkwave
-        $dumpvars(0,tb);
+        //$dumpfile("dump.vcd"); //gerar arquivo de forma de onda, para ser usado no gtkwave
+        //$dumpvars(0,tb);
         
         $monitor("saida: %b", saida);
 		

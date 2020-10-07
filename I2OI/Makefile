@@ -9,10 +9,10 @@ WAV=gtkwave
 
 all: run
 
-compile: ../*.v *.v
+design: *.v
 	$(COM) -Wall $^ -o $@.vvp
 
-run: compile
+run: design
 	$(SIM) $^.vvp
 
 wave: run

@@ -43,7 +43,7 @@ module PC
 	
 	output reg [31:0] pc_out
 );
-
+initial $monitor("pc: %b", clk);
 	always @(posedge clk) 
 	begin
 		pc_out <= pc_in;
