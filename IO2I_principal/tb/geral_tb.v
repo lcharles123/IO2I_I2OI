@@ -4,7 +4,7 @@ module geral_tb();
     initial
     begin
         $display("Loading rom.");
-		$readmemh("instrucoes.mem", ex1_memory, 0, 3);
+		#0 $readmemh("instrucoes.mem", ex1_memory);
     end
     
     initial 
@@ -12,7 +12,7 @@ module geral_tb();
 		$display("memoria 0: %h | ",ex1_memory[0]);		
 		$display("memoria 1: %h | ",ex1_memory[1]);		
 		$display("memoria 2: %h | ",ex1_memory[2]);
-		$display("memoria 3: %h | ",ex1_memory[3]);
+		$display("memoria 3: %h | ",ex1_memory[31]);
     end
     
 endmodule

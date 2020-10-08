@@ -11,4 +11,6 @@ O código é escrito na linguagem verilog e descreve o comportamento de duas org
 
 # Usando o repositorio:
 
-Usar o Makefile que se encontra na pasta tb
+Usar o Makefile que se encontra na pasta I2OI 
+
+Desenvolver I2OI primeiro.

@@ -1,240 +1,31 @@
-/** FETCH	**/
-module Fetch 
-(	
-	input zero, rst, clk, branch, 
-	input [31:0] branch_res, 
-	
-	output [31:0] inst
-);
-
-	wire [31:0] PC, PC_4, newPC;
-
-	assign PC_4 = PC + 4; // pc+4  Adder
-	assign newPC = (branch & zero) ? PC_4 + branch_res : PC_4; // desvia se for um branch beq for true
-
-	PC program_counter(newPC, clk, rst, PC);
-
-	reg [31:0] inst_mem [0:31];
-
-	assign inst = inst_mem[PC[31:2]];
-
-	initial
-	begin
-		// Exemplos
-		inst_mem[0] <= 32'h00000000; // nop
-		inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
-		inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
-		//inst_mem[1] <= 32'h00202223; // sw x2, 8(x0) ok
-		//inst_mem[1] <= 32'h0050a423; // sw x5, 8(x1) ok
-		//inst_mem[2] <= 32'h0000a003; // lw x1, x0(0) ok
-		//inst_mem[1] <= 32'hfff00113; // addi x2,x0,-1 ok
-		//inst_mem[2] <= 32'h00318133; // add x2, x3, x3 ok
-		//inst_mem[3] <= 32'h40328133; // sub x2, x5, x3 ok
-	end
-
-endmodule
-
-
-
-module PC 
+/** CORE **/
+module Core 
 (
-	input [31:0] pc_in, 
 	input clk, rst, 
 	
-	output reg [31:0] pc_out
+	output [31:0] writedata
 );
-initial $monitor("pc: %b", clk);
-	always @(posedge clk) 
-	begin
-		pc_out <= pc_in;
-		if (~rst)
-			pc_out <= 0;
-	end
-
-endmodule
-
-
-
-/** DECODE **/
-module Decode 
-(
-	input [31:0] inst, writedata, 
-	input clk, 
-
-	output [31:0] data1, data2, ImmGen, 
-	output alusrc, memread, memwrite, memtoreg, branch, 
-	output [1:0] aluop, 
-	output [9:0] funct
-);
-
-	wire branch, memread, memtoreg, MemWrite, alusrc, regwrite;
-	wire [1:0] aluop; 
-	wire [4:0] writereg, rs1, rs2, rd;
-	wire [6:0] opcode;
-	wire [9:0] funct;
-	wire [31:0] ImmGen;
-
-	assign opcode = inst[6:0];
-	assign rs1    = inst[19:15];
-	assign rs2    = inst[24:20];
-	assign rd     = inst[11:7];
-	assign funct = {inst[31:25],inst[14:12]};
-
-	Controle control (opcode, inst, alusrc, memtoreg, regwrite, memread, memwrite, branch, aluop, ImmGen);
-
-	ARF registradores (clk, regwrite, rs1, rs2, rd, writedata, data1, data2); 
-
-endmodule
-
-
-
-
-/** ISSUE **/
-
-module Issue();
-
-endmodule
-
-
-module Score_Board();
-
-endmodule
-
-
-
-
-
-/** EXECUTE **/
-module Execute 
-(
-	input [31:0] in1, in2, ImmGen, 
-	input alusrc, input [1:0] aluop, 
-	input [9:0] funct, 
-	
-	output zero, 
-	output [31:0] aluout
-);
-
-  wire [31:0] alu_B;
-  wire [3:0] aluctrl;
   
-  assign alu_B = (alusrc) ? ImmGen : in2 ;
-
-  //Unidade Lógico Aritimética
-  ALU alu (aluctrl, in1, alu_B, aluout, zero);
-
-  ALUcontrol alucontrol (aluop, funct, aluctrl);
-
-endmodule
-
-
-module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout, output zero);
+  wire [31:0] inst, sigext, data1, data2, aluout, readdata;
+  wire zero, memread, memwrite, memtoreg, branch, alusrc;
+  wire [9:0] funct;
+  wire [1:0] aluop;
   
-  assign zero = (aluout == 0); // Zero recebe um valor lógico caso aluout seja igual a zero.
+  // FETCH STAGE
+  Fetch fetch (zero, rst, clk, branch, sigext, inst);
+  //initial #2 $monitor("clk: %b", clk);
+  // DECODE STAGE
+  Decode decode (inst, writedata, clk, data1, data2, sigext, alusrc, memread, memwrite, memtoreg, branch, aluop, funct);   
   
-  always @(alucontrol, A, B) begin
-      case (alucontrol)
-        0: aluout <= A & B; // AND
-        1: aluout <= A | B; // OR
-        2: aluout <= A + B; // ADD
-        6: aluout <= A - B; // SUB
-        //7: aluout <= A < B ? 32'd1:32'd0; //SLT
-        //12: aluout <= ~(A | B); // NOR
-      default: aluout <= 0; //default 0, Nada acontece;
-    endcase
-  end
-endmodule
+  // EXECUTE STAGE
+  Execute execute (data1, data2, sigext, alusrc, aluop, funct, zero, aluout);
 
-module Load_Store 
-(
-	input [31:0] address, writedata, 
-	input memread, memwrite, clk, 
-	
-	output [31:0] readdata
-);
+  // MEMORY STAGE
+  Load_Store memory (aluout, data2, memread, memwrite, clk, readdata);
 
-  integer i;
-  reg [31:0] memory [0:127]; 
+  // WRITEBACK STAGE
+  Writeback writeback (aluout, readdata, memtoreg, writedata);
   
-  // fill the memory
-  initial begin
-    for (i = 0; i < 128; i=i+1) 
-      memory[i] <= i;
-  end
-
-  assign readdata = (memread) ? memory[address[31:2]] : 0;
-
-  always @(posedge clk) begin
-    if (memwrite)
-      memory[address[31:2]] <= writedata;
-	end
-endmodule
-
-
-/** WRITEBACK **/
-module Writeback 
-(
-	input [31:0] aluout, readdata, 
-	input memtoreg, 
-	
-	output reg [31:0] write_data
-);
-
-	always @(memtoreg) begin
-		write_data <= (memtoreg) ? readdata : aluout;
-	end
-endmodule
-
-module Phisical_Register_file();
-
-endmodule
-
-
-module Reorder_Buffer();
-
-endmodule
-
-
-module Finished_Store_Buffer();
-
-
-endmodule
-
-
-/** COMMIT **/
-
-module Commit();
-
-endmodule
-
-
-module ARF 
-(
-	input clk, regwrite, 
-	input [4:0] read_reg1, read_reg2, writereg, 
-	input [31:0] writedata, 
-	
-	output [31:0] read_data1, read_data2
-);
-
-	integer i;
-	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
-
-	// fill the memory
-	initial 
-	begin
-		for (i = 0; i <= 31; i=i+1) 
-			memory[i] <= i;
-	end
-
-	assign read_data1 = (regwrite && read_reg1==writereg) ? writedata : memory[read_reg1];
-	assign read_data2 = (regwrite && read_reg2==writereg) ? writedata : memory[read_reg2];
-
-	always @(posedge clk) 
-	begin
-		if (regwrite)
-			memory[writereg] <= writedata;
-	end
 
 endmodule
 
@@ -318,38 +109,268 @@ module ALUcontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
 endmodule
 
 
-/** CORE **/
-module Core 
+
+
+/** FETCH	**/
+module Fetch 
+(	
+	input zero, rst, clk, branch, 
+	input [31:0] branch_res, 
+	
+	output [31:0] inst
+);
+
+	wire [31:0] PC, PC_4, newPC;
+
+	assign PC_4 = PC + 4; // pc+4  Adder
+	assign newPC = (branch & zero) ? PC_4 + branch_res : PC_4; // desvia se for um branch beq for true
+
+	PC program_counter(newPC, clk, rst, PC);
+
+	reg [31:0] inst_mem [0:31];
+
+	assign inst = inst_mem[PC[31:2]];
+	
+	
+	initial
+	begin
+		
+		$readmemh("tb/inst.mem",inst_mem , 0, 31);
+		/*
+		// Exemplos
+		inst_mem[0] <= 32'h00202223; // nop
+		inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
+		inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
+		inst_mem[3] <= 32'h00202223; // sw x2, 8(x0) ok
+		inst_mem[4] <= 32'h0050a423; // sw x5, 8(x1) ok
+		inst_mem[5] <= 32'h0000a003; // lw x1, x0(0) ok
+		inst_mem[6] <= 32'hfff00113; // addi x2,x0,-1 ok
+		inst_mem[7] <= 32'h00318133; // add x2, x3, x3 ok
+		inst_mem[8] <= 32'h40328133; // sub x2, x5, x3 ok
+		*/
+		
+	end
+	
+	/*initial 
+	begin
+		$display("memoria : %h | ",inst_mem[0]);		
+		$display("memoria : %h | ",inst_mem[1]);		
+		$display("memoria : %h | ",inst_mem[30]);
+		$display("memoria : %h | ",inst_mem[31]);
+	end*/
+	
+	
+	
+endmodule
+
+
+
+module PC 
 (
+	input [31:0] pc_in, 
 	input clk, rst, 
 	
-	output [31:0] writedata
+	output reg [31:0] pc_out
 );
-  
-  wire [31:0] inst, sigext, data1, data2, aluout, readdata;
-  wire zero, memread, memwrite, memtoreg, branch, alusrc;
-  wire [9:0] funct;
-  wire [1:0] aluop;
-  
-  // FETCH STAGE
-  Fetch fetch (zero, rst, clk, branch, sigext, inst);
-  
-  // DECODE STAGE
-  Decode decode (inst, writedata, clk, data1, data2, sigext, alusrc, memread, memwrite, memtoreg, branch, aluop, funct);   
-  
-  // EXECUTE STAGE
-  Execute execute (data1, data2, sigext, alusrc, aluop, funct, zero, aluout);
 
-  // MEMORY STAGE
-  Load_Store memory (aluout, data2, memread, memwrite, clk, readdata);
-
-  // WRITEBACK STAGE
-  Writeback writeback (aluout, readdata, memtoreg, writedata);
-  
-  
-  
-  
-  
+	always @(posedge clk) 
+	begin
+		pc_out <= pc_in;
+		if (~rst)
+			pc_out <= 0;
+	end
 
 endmodule
+
+
+
+/** DECODE **/
+module Decode 
+(
+	input [31:0] inst, writedata, 
+	input clk, 
+
+	output [31:0] data1, data2, ImmGen, 
+	output alusrc, memread, memwrite, memtoreg, branch, 
+	output [1:0] aluop, 
+	output [9:0] funct
+);
+
+	wire branch, memread, memtoreg, MemWrite, alusrc, regwrite;
+	wire [1:0] aluop; 
+	wire [4:0] writereg, rs1, rs2, rd;
+	wire [6:0] opcode;
+	wire [9:0] funct;
+	wire [31:0] ImmGen;
+
+	assign opcode = inst[6:0];
+	assign rs1    = inst[19:15];
+	assign rs2    = inst[24:20];
+	assign rd     = inst[11:7];
+	assign funct = {inst[31:25],inst[14:12]};
+
+	Controle control (opcode, inst, alusrc, memtoreg, regwrite, memread, memwrite, branch, aluop, ImmGen);
+
+	ARF registradores (clk, regwrite, rs1, rs2, rd, writedata, data1, data2); 
+
+
+endmodule
+
+
+
+
+/** ISSUE **/
+
+module Issue();
+
+endmodule
+
+
+module Score_Board();
+
+endmodule
+
+
+
+
+
+/** EXECUTE **/
+module Execute 
+(
+	input [31:0] in1, in2, ImmGen, 
+	input alusrc, input [1:0] aluop, 
+	input [9:0] funct, 
+	
+	output zero, 
+	output [31:0] aluout
+);
+
+  wire [31:0] alu_B;
+  wire [3:0] aluctrl;
+  
+  assign alu_B = (alusrc) ? ImmGen : in2 ;
+
+  //Unidade Lógico Aritimética
+  ALU alu (aluctrl, in1, alu_B, aluout, zero);
+
+  ALUcontrol alucontrol (aluop, funct, aluctrl);
+
+endmodule
+
+
+module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout, output zero);
+  
+  assign zero = (aluout == 0); // Zero recebe um valor lógico caso aluout seja igual a zero.
+  
+  always @(alucontrol, A, B) begin
+      case (alucontrol)
+        0: aluout <= A & B; // AND
+        1: aluout <= A | B; // OR
+        2: aluout <= A + B; // ADD
+        6: aluout <= A - B; // SUB
+        //7: aluout <= A < B ? 32'd1:32'd0; //SLT
+        //12: aluout <= ~(A | B); // NOR
+      default: aluout <= 0; //default 0, Nada acontece;
+    endcase
+  end
+endmodule
+
+module Load_Store 
+(
+	input [31:0] address, writedata, 
+	input memread, memwrite, clk, 
+	
+	output [31:0] readdata
+);
+
+  integer i;
+  reg [31:0] memory [0:127]; 
+  
+  // fill the memory
+  initial begin
+    for (i = 0; i < 128; i=i+1) 
+      memory[i] <= 15;
+  end
+
+  assign readdata = (memread) ? memory[address[31:2]] : 0;
+
+  always @(posedge clk) begin
+    if (memwrite)
+      memory[address[31:2]] <= writedata;
+	end
+endmodule
+
+
+/** WRITEBACK **/
+module Writeback 
+(
+	input [31:0] aluout, readdata, 
+	input memtoreg, 
+	
+	output reg [31:0] write_data
+);
+
+	always @(memtoreg) begin
+		write_data <= (memtoreg) ? readdata : aluout;
+	end
+endmodule
+
+module Phisical_Register_file();
+
+endmodule
+
+
+module Reorder_Buffer();
+
+endmodule
+
+
+module Finished_Store_Buffer();
+
+
+endmodule
+
+
+/** COMMIT **/
+
+module Commit();
+
+endmodule
+
+
+module ARF 
+(
+	input clk, regwrite, 
+	input [4:0] read_reg1, read_reg2, writereg, 
+	input [31:0] writedata, 
+	
+	output [31:0] read_data1, read_data2
+);
+
+	integer i;
+	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
+
+	// fill the memory
+	initial $readmemh("tb/dados.mem", memory, 0, 31);
+/*
+	initial 
+	begin
+		$display("memoria : %h | ",memory[0]);		
+		$display("memoria : %h | ",memory[1]);		
+		$display("memoria : %h | ",memory[30]);
+		$display("memoria : %h | ",memory[31]);
+	end*/
+
+	assign read_data1 = (regwrite && read_reg1==writereg) ? writedata : memory[read_reg1];
+	assign read_data2 = (regwrite && read_reg2==writereg) ? writedata : memory[read_reg2];
+
+	always @(posedge clk) 
+	begin
+		if (regwrite)
+			memory[writereg] <= writedata;
+	end
+
+endmodule
+
+
 

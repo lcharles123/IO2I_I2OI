@@ -9,7 +9,7 @@ WAV=gtkwave
 
 all: compile
 
-compile: ../*.v
+compile: ../*.v *.v
 	$(COM) -Wall $^ -o $@.vvp
 
 run: compile

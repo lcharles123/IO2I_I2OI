@@ -1,0 +1,32 @@
+00202223 // nop
+00500113 // addi x2, x0, 5  ok
+00210233 // add  x4, x2, x2  ok
+00202223 // sw x2, 8(x0) ok
+0050a423 // sw x5, 8(x1) ok
+0000a003 // lw x1, x0(0) ok
+fff00113 // addi x2,x0,-1 ok
+00318133 // add x2, x3, x3 ok
+40328133 // sub x2, x5, x3 ok
+fff00113 // addi x2,x0,-1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+fff00113 // addi x2,x0, 1 rep
+00ff00ff // addi x2,x0, 1 rep
+ffffffff // addi x2,x0, 1 rep
