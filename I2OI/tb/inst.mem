@@ -1,32 +1,34 @@
-00202223 // nop
-00500113 // addi x2, x0, 5  ok
-00210233 // add  x4, x2, x2  ok
-00202223 // sw x2, 8(x0) ok
-0050a423 // sw x5, 8(x1) ok
-0000a003 // lw x1, x0(0) ok
-fff00113 // addi x2,x0,-1 ok
-00318133 // add x2, x3, x3 ok
-40328133 // sub x2, x5, x3 ok
-fff00113 // addi x2,x0,-1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-fff00113 // addi x2,x0, 1 rep
-00ff00ff // addi x2,x0, 1 rep
-ffffffff // addi x2,x0, 1 rep
+00000000 // nop
+200a0005 // addi $t2,$zero,5
+200b0007 // addi $t3,$zero,7
+200c0002 // addi $t4,$zero,2
+200d0003 // addi $t5,$zero,3
+014b5020 // add $t2,$t2,$t3
+016c5820 // add $t3,$t3,$t4
+018c6020 // add $t4,$t4,$t4
+01aa6820 // add $t5,$t5,$t2
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+01aa6820 // add $t5,$t5,$t2 rep
+
+ 
