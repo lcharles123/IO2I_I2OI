@@ -25,10 +25,9 @@ module core_tb ();
 
 		#2 $monitor("clk %d, writedata = %d",cont , writedata);
        
-        
-	#80 $finish; //para a simulacao
+		#80 $finish; //para a simulacao
         
 	end
 
-
 endmodule
+

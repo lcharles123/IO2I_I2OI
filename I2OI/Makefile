@@ -24,7 +24,7 @@ clean:
 	rm -rf *.vcd
 
 help:
-	@echo "\tmake <target>\n\n\tlista de targets:\n\tcore \n\tclean\n" 
+	@echo "\tmake [target]\n\n\tlista de targets:\n\tcore \n\tclean\n" 
 
 
 
