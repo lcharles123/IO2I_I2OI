@@ -13,21 +13,33 @@ module pipemips
 	wire pc_src;
 
 
-	Fetch fetch (rst, clk, pc_src, m_addres, d_inst, d_pc);
+	Fetch fetch (rst, clk, pc_src, 
+					
+					m_addres, d_inst, d_pc);
 
 
-	Decode decode (clk, rst, w_regwrite, d_inst, d_pc, reg_writedata, w_muxRegDst, e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch);
+	Decode decode (clk, rst, w_regwrite, d_inst, d_pc, reg_writedata, w_muxRegDst,
+	
+					 e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
+					 e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch);
 
 
-	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, m_alures, m_addres, write_data, m_muxRegDst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite);
+	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
+	
+						m_alures, m_addres, write_data, m_muxRegDst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite);
 
 
-	Memory memory (clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, m_alures, write_data, m_muxRegDst, w_readData, w_alures, w_memtoreg, w_regwrite, pc_src, w_muxRegDst);
+	Memory memory (clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, m_alures, write_data, m_muxRegDst,
+		
+						w_readData, w_alures, w_memtoreg, w_regwrite, pc_src, w_muxRegDst);
 
 
-	Writeback writeback (w_readData, w_alures, w_memtoreg, reg_writedata);
+	Writeback writeback (w_readData, w_alures, w_memtoreg, 
+	
+							reg_writedata);
 
 endmodule
+
 
 /** FETCH **/
 module Fetch 
@@ -44,19 +56,21 @@ module Fetch
 	assign pc_4 = 4 + pc;
 	assign new_pc = (pc_src) ? add_res : pc_4;
 
-	PC program_counter(new_pc, clk, rst, pc);
+	PC program_counter(new_pc, clk, rst, 
+						pc);
 
 	reg [31:0] inst_mem [0:31];
 
 	assign inst = inst_mem[pc[31:2]];
 
 	/** IFID **/
-	IFID IFID (clk, rst, pc_4, inst, d_pc, d_inst);
+	IFID IFID (clk, rst, pc_4, inst, 
+					d_pc, d_inst);
 
 	initial 
 	begin
 
-		$readmemh("tb/inst.mem",inst_mem, 0, 31);
+		$readmemb("tb/inst.mem",inst_mem, 0, 31);
 		
 		/*
 		inst_mem[0] <= 32'h00000000; // nop
@@ -64,7 +78,6 @@ module Fetch
 		inst_mem[2] <= 32'h8c020004; // lw r2, 4(r0)   =>   r2 = m[r0+4] 
 		inst_mem[3] <= 32'h00220820; // add r1,r1,r2   =>   r1 = r1 + r2 
 		inst_mem[4] <= 32'hac010008; // sw r1, 8(r0)   =>   m[r0+8] = r1
-
 
 		inst_mem[0] <= 32'h00000000; // nop
 		inst_mem[1] <= 32'h200a0005; // addi $t2,$zero,5
@@ -98,13 +111,13 @@ endmodule
 
 module IFID 
 (
-	input f_clk, f_rst, 
+	input clk, f_rst, 
 	input [31:0] f_pc, f_inst, 
 	
 	output reg [31:0] d_pc, d_inst
 );
 
-	always @(posedge f_clk) 
+	always @(posedge clk) 
 	begin
 		if (!f_rst) 
 		begin
@@ -122,7 +135,7 @@ endmodule
 /** DECODE **/
 module Decode 
 (
-	input d_clk, rst, regwrite, 
+	input clk, rst, regwrite, 
 	input [31:0] inst, pc, writedata, 
 	input [4:0] muxRegDst, 
 	
@@ -143,21 +156,27 @@ module Decode
 	assign rt = inst[20:16];
 	assign rd = inst[15:11];
 
-	assign sig_ext = (inst[15]) ? {16'hFFFF,inst[15:0]} : {16'd0,inst[15:0]};
+	assign sig_ext = (inst[15]) ? {16'd1,inst[15:0]} : {16'd0,inst[15:0]}; // extensor de sinal coloca 1 se negativo, 0 caso contrario
 
-	Control control (opcode, regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
+	Control control (opcode, 
+					
+					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
-	ARF Registers (d_clk, regwrite, rs, rt, muxRegDst, writedata, data1, data2);
+
+	ARF Registers (clk, regwrite, rs, rt, muxRegDst, writedata, 
+					
+					data1, data2);
 
 	/** IDEX **/
-	IDEX idex (d_clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rd, e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2);
+	IDEX idex (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rd,
+				e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2);
+
 
 endmodule
 
-
 module IDEX 
 (
-	input d_clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
+	input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
 	input [1:0] d_aluop, 
 	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
 	input [4:0] d_inst1, d_inst2, 
@@ -168,7 +187,7 @@ module IDEX
 	output reg [4:0] e_inst1, e_inst2
 );
 
-	always @(posedge d_clk) 
+	always @(posedge clk) 
 	begin
 		if (!rst) 
 		begin
@@ -207,37 +226,66 @@ module IDEX
 	end
 endmodule
 
-
-module ARF 
+module Issue
 (
-	input clk, regwrite, 
-	input [4:0] read1, read2, writereg, 
-	input [31:0] writedata, 
+/*	input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
+	input [1:0] d_aluop, 
+	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
+	input [4:0] d_inst1, d_inst2, 
 	
-	output [31:0] data1, data2
+	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
+	output reg [1:0] e_aluop, 
+	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
+	output reg [4:0] e_inst1, e_inst2*/
 );
 
-	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
-
-	// Popular os registradores
-	initial $readmemh("tb/dados.mem", memory, 0, 31);
-
-
-	assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1];
-	assign data2 = (regwrite && read2==writereg) ? writedata : memory[read2];
-
-	always @(posedge clk) 
+/*	always @(posedge clk) 
 	begin
-    	if (regwrite)
-        	memory[writereg] <= writedata;
-  	end
-  
+		if (!rst) 
+		begin
+			e_regwrite <= 0;
+			e_memtoreg <= 0;
+			e_branch   <= 0;
+			e_memwrite <= 0;
+			e_memread  <= 0;
+			e_regdst   <= 0;
+			e_aluop    <= 0;
+			e_alusrc   <= 0;
+			e_pc       <= 0;
+			e_rd1      <= 0;
+			e_rd2      <= 0;
+			e_sigext   <= 0;
+			e_inst1    <= 0;
+			e_inst2    <= 0;
+		end
+		else 
+		begin
+			e_regwrite <= d_regwrite;
+			e_memtoreg <= d_memtoreg;
+			e_branch   <= d_branch;
+			e_memwrite <= d_memwrite;
+			e_memread  <= d_memread;
+			e_regdst   <= d_regdst;
+			e_aluop    <= d_aluop;
+			e_alusrc   <= d_alusrc;
+			e_pc       <= d_pc;
+			e_rd1      <= d_rd1;
+			e_rd2      <= d_rd2;
+			e_sigext   <= d_sigext;
+			e_inst1    <= d_inst1;
+			e_inst2    <= d_inst2;
+		end
+	end*/
+	
+	
+	//Score_Board sb();
+			
 endmodule
 
 /** EXECUTE **/
 module Execute 
 (
-	input e_clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, 
+	input clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, 
 	input [31:0] e_in1, e_in2, e_sigext, e_pc, 
 	input [4:0] e_inst20_16, e_inst15_11, 
 	input [1:0] e_aluop, 
@@ -252,19 +300,23 @@ module Execute
 	wire [4:0] e_muxRegDst;
 	wire e_zero;
 
-	Add Add (e_pc, e_sigext, e_addres);
+	Add Add (e_pc, e_sigext,
+				e_addres);
 
 	assign alu_B = (e_alusrc) ? e_sigext : e_in2 ;
 
 	//Unidade Lógico Aritimética
-	ALU alu (aluctrl, e_in1, alu_B, e_aluout, e_zero);
+	ALU alu (aluctrl, e_in1, alu_B, 
+				e_aluout, e_zero);
 
-	Alucontrol alucontrol (e_aluop, e_sigext[5:0], aluctrl);
+	Alucontrol alucontrol (e_aluop, e_sigext[5:0], 
+								aluctrl);
 
 	assign e_muxRegDst = (e_regdst) ? e_inst15_11 : e_inst20_16;
 
 	/** EXMEM **/
-	EXMEM exmem (e_clk, rst, e_regwrite, e_memtoreg, e_branch, e_zero, e_memread, e_memwrite, e_addres, e_aluout, alu_B, e_muxRegDst, m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, m_branch, m_addres, m_alures, m_rd2, m_muxRegDst);
+	EXMEM exmem (clk, rst, e_regwrite, e_memtoreg, e_branch, e_zero, e_memread, e_memwrite, e_addres, e_aluout, alu_B, e_muxRegDst, 
+					m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, m_branch, m_addres, m_alures, m_rd2, m_muxRegDst);
 
 endmodule
 
@@ -310,7 +362,7 @@ endmodule
 
 module EXMEM 
 (
-	input e_clk, rst, e_regwrite, e_memtoreg, e_branch, e_zero, e_memread, e_memwrite, 
+	input clk, rst, e_regwrite, e_memtoreg, e_branch, e_zero, e_memread, e_memwrite, 
 	input [31:0] e_addres, e_alures, e_rd2, 
 	input [4:0] e_muxRegDst, 
 	
@@ -319,7 +371,7 @@ module EXMEM
 	output reg [4:0] m_muxRegDst
 );
 
-	always @(posedge e_clk) 
+	always @(posedge clk) 
 	begin
 		if (!rst) 
 		begin
@@ -353,7 +405,7 @@ endmodule
 /** MEM **/
 module Memory 
 (
-	input m_clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, 
+	input clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, 
 	input [31:0] m_alures, writedata, 
 	input [4:0] m_muxRegDst, 
 	
@@ -367,26 +419,40 @@ module Memory
 
 	//popular memoria
 	initial $readmemh("tb/dados.mem", memory, 0, 31);
-
+	
+	/*
+	memory[0] <= 32'd1; 
+	memory[1] <= 32'd2; 
+	memory[2] <= 32'd3; 
+	memory[3] <= 32'd4; 
+	memory[4] <= 32'd5; 
+	memory[5] <= 32'd6; 
+	memory[6] <= 32'd7; 
+	memory[7] <= 32'd8; 
+	memory[8] <= 32'd9; 
+	*/
+	
 	assign pc_src = (m_zero & m_branch) ? 1 : 0; 
 
 	assign m_readdata = (m_memread) ? memory[m_alures[31:2]] : 0;
 
-	always @(posedge m_clk) 
+	always @(posedge clk) 
 	begin
 		if (m_memwrite)
 			memory[m_alures[31:2]] = writedata;
 	end
 
 	/** MEMWB **/
-	MEMWB MEMWB (m_clk, rst, m_regwrite, m_memtoreg, m_readdata, m_alures, m_muxRegDst, w_readdata, w_alures, w_muxRegDst, w_regwrite, w_memtoreg); 
+	MEMWB MEMWB (clk, rst, m_regwrite, m_memtoreg, m_readdata, m_alures, m_muxRegDst, 
+					
+					w_readdata, w_alures, w_muxRegDst, w_regwrite, w_memtoreg); 
 
 endmodule
 
 
 module MEMWB 
 (
-	input m_clk, rst, m_regwrite, m_memtoreg, 
+	input clk, rst, m_regwrite, m_memtoreg, 
 	input [31:0] m_readData, m_alures, 
 	input [4:0] m_muxRegDst,
 	
@@ -394,7 +460,7 @@ module MEMWB
 	output reg [4:0] w_muxRegDst, 
 	output reg w_regwrite, w_memtoreg
 );
-	always @(posedge m_clk) 
+	always @(posedge clk) 
 	begin
 		if (!rst) 
 		begin
@@ -428,6 +494,7 @@ module Writeback
 
 endmodule
 
+
 /** CONTROL **/
 module Control 
 (
@@ -440,7 +507,7 @@ module Control
 	always @(opcode) 
 	begin
 		case(opcode) 
-			6'd0: 
+			6'b000000: 
 			begin // R type
 				regdst <= 1 ;
 				alusrc <= 0 ;
@@ -451,7 +518,7 @@ module Control
 				branch <= 0 ;
 				aluop <= 2 ;
 			end
-			6'd4: 
+			6'b000100: 
 			begin // beq
 				regdst <= 0 ;
 				alusrc <= 0 ;
@@ -462,7 +529,7 @@ module Control
 				branch <= 1 ;
 				aluop <= 1 ;
 			end
-			6'd8: 
+			6'b001000: 
 			begin // addi
 				regdst <= 0 ;
 				alusrc <= 1 ;
@@ -473,7 +540,7 @@ module Control
 				branch <= 0 ;
 				aluop <= 0 ;
 			end
-			6'd35: 
+			6'b100011: 
 			begin // lw
 				regdst <= 0 ;
 				alusrc <= 1 ;
@@ -484,7 +551,7 @@ module Control
 				branch <= 0 ;
 				aluop <= 0 ;
 			end
-			6'd43: 
+			6'b101011: 
 			begin // sw
 				regdst <= 0 ;
 				alusrc <= 1 ;
@@ -511,6 +578,7 @@ module Control
 
 endmodule 
 
+
 module Alucontrol 
 (
 	input [1:0] aluop, 
@@ -524,20 +592,164 @@ module Alucontrol
 	always @(aluop or funct) 
 	begin
 		case (aluop)
-			0: alucontrol <= 4'd2; // ADD para sw e lw
-			1: alucontrol <= 4'd6; // SUB para branch
-			default: 
+			2'b00: alucontrol <= 4'b0010; // ADD para sw e lw
+			2'b01: alucontrol <= 4'b0110; // SUB para branch
+			default:
 			begin
 				case (funct)
-					32: alucontrol <= 4'd2; // ADD
-					34: alucontrol <= 4'd6; // SUB
-					36: alucontrol <= 4'd0; // AND
-					37: alucontrol <= 4'd1; // OR
-					39: alucontrol <= 4'd12; // NOR
-					42: alucontrol <= 4'd7; // SLT
-					default: alucontrol <= 4'd15; // Nada acontece
+					32: alucontrol <= 4'b0010; // ADD
+					34: alucontrol <= 4'b0110; // SUB
+					36: alucontrol <= 4'b0000; // AND
+					37: alucontrol <= 4'b0001; // OR
+					39: alucontrol <= 4'd12; // NOR ?
+					42: alucontrol <= 4'b0111; // SLT
+					default: alucontrol <= 4'd15; // Nada acontece ?
 				endcase
 			end
 		endcase
 	end
 endmodule
+
+
+/** modulos auxiliares do superscalar **/
+
+
+module Score_Board 
+(
+	input [5:0] linha, //linha no scoreboard 2**5 == 32 registradores
+	input escrever,//se eh um acesso de escrita
+	input [7:0] in_valor, //valor de escrita, [0] == pendente?; [1:2] == nome unidade funcional; [3:7] == localizacao do dado
+	
+	output [7:0] out_valor //valor para leitura
+);
+	reg [7:0] out_valor;
+	
+	reg [7:0] sb [0:31]; // 32 linhas de 8 bits cada
+	
+	always @(*)
+	begin
+		if(escrever)
+		begin
+			sb[linha] = in_valor;
+			out_valor = sb[linha];
+		end
+		else
+		begin
+			out_valor <= sb[linha];
+		end
+	end
+
+endmodule
+
+
+module PRF // registradores auxiliares
+(
+	input clk, regwrite, 
+	input [4:0] read1, read2, writereg, 
+	input [31:0] writedata, 
+	
+	output [31:0] data1, data2
+);
+
+	reg [31:0] memory_tmp [0:31]; // 32 bits cada um dos 32 registers 
+	
+	// Popular os registradores
+	//initial $readmemh("tb/dados.mem", memory, 0, 31);
+	integer i;
+	initial for(i = 0; i < 32; i = i+1) memory_tmp[i] = 0;
+
+	assign data1 = (regwrite && read1==writereg) ? writedata : memory_tmp[read1];
+	assign data2 = (regwrite && read2==writereg) ? writedata : memory_tmp[read2];
+
+	always @(posedge clk) 
+	begin
+    	if (regwrite)
+        	memory_tmp[writereg] <= writedata;
+  	end
+  
+endmodule
+
+module ARF  //registradores principais da maquina
+(
+	input clk, regwrite, 
+	input [4:0] read1, read2, writereg, 
+	input [31:0] writedata, 
+	
+	output [31:0] data1, data2
+);
+
+	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
+
+	// Popular os registradores
+	initial $readmemh("tb/dados.mem", memory, 0, 31);
+
+
+	assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1];
+	assign data2 = (regwrite && read2==writereg) ? writedata : memory[read2];
+
+	always @(posedge clk) 
+	begin
+    	if (regwrite)
+        	memory[writereg] <= writedata;
+  	end
+  
+endmodule
+
+
+module Reorder_Buffer //https://esrd2014.blogspot.com/p/first-in-first-out-buffer.html
+(
+	// descricao do dado_in e dado_out abaixo
+	// State: (Free, Pending, Finished) [9:8] 3 estados para representar
+	// S: especulativo  [7]
+	// ST: Store bit [6]
+	// V: destino PRF valido [5]
+	// Preg: end PRF [4:0]  2**5 registradores no PRF
+	input clk, rst, 
+	input [1:0] lerEscrever, //[1] == leitura; [0] == escrita
+	input [9:0] dado_in, 
+
+	output [9:0] dado_out,
+	output cheio
+);
+	//wire [1:0] lerEscrever;
+	reg [9:0] dado_out;
+	reg [2:0] inicio, fim, contador; // 2**3 == 8, marcar o tamanho da tabela
+
+	reg [9:0] fila [7:0]; //fila possui 10 bits por linha e 8 linhas
+
+    assign cheio = (contador == 3'b111) ? 1'b1 : 1'b0 ; //quando o rob estiver cheio
+
+    always @(posedge clk) 
+    begin 
+		if(!rst)
+		begin
+			if (lerEscrever == 2'b10 && contador != 3'b0) // se leitura e fila nao vazia
+			begin 
+				dado_out = fila[inicio]; // ler inicio da fila
+				inicio = inicio + 1;//leitor ++
+  			end 
+  			else if (lerEscrever == 2'b01 && contador < 8) // se escrita e fila nao cheia
+  			begin
+  				fila[fim] = dado_in;
+  				fim = fim + 1;
+  			end
+   			
+   			if(fim == 8) //se algum contador chegou na posicao 8, volta pra 0
+   				fim = 0;
+   			else if(inicio == 8)
+   				inicio = 0;
+   			
+   			if(inicio > fim)
+   				contador = inicio - fim;
+   			else if(fim > inicio)
+   				contador = fim - inicio;
+		end
+		else
+		begin
+			inicio <= 0;
+			fim <= 0;
+			contador <= 0;
+		end	
+	end
+endmodule
+
