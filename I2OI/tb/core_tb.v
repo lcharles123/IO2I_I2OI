@@ -1,6 +1,6 @@
 module core_tb ();
 
-	reg clk, rst;
+	reg clk, rst, stall;
 	wire [31:0] writedata;
 	integer cont;
 		
@@ -10,13 +10,15 @@ module core_tb ();
 		rst <= 0;
 		cont = 0;
 		#1 rst <= 1;
-		
+		stall <= 0;
+		#15 stall = 1;
+		#20 stall = 0;
 	end
 	
 	always #1 clk = ~clk; 
 	always @(posedge clk) cont = cont + 1; //contador para o $monitor()
 	
-	pipemips core(clk, rst, 
+	pipemips core(clk, rst, stall,
 					writedata);
 
 	initial 

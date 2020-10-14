@@ -1,7 +1,7 @@
 /** CORE **/
 module pipemips 
 (
-	input clk, rst, 
+	input clk, rst, stall, 
 	
 	output [31:0] reg_writedata
 );
@@ -10,18 +10,18 @@ module pipemips
 	wire e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, w_regwrite, w_memtoreg, m_branch;
 	wire [1:0] e_aluop;
 	wire [4:0] e_inst1, e_inst2, e_muxRegDst, m_muxRegDst, w_muxRegDst;
-	wire pc_src;
+	wire pc_src, stall;
 
 
-	Fetch fetch (rst, clk, pc_src, 
+	Fetch fetch (rst, stall, clk, pc_src, 
 					
 					m_addres, d_inst, d_pc);
 
 
 	Decode decode (clk, rst, w_regwrite, d_inst, d_pc, reg_writedata, w_muxRegDst,
 	
-					 e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
-					 e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch);
+					e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
+					e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch);
 
 
 	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
@@ -42,9 +42,9 @@ endmodule
 
 
 /** FETCH **/
-module Fetch 
+module Fetch // se stall == 1, insere nop
 (
-	input rst, clk, pc_src, 
+	input rst, stall, clk, pc_src, 
 	input [31:0] add_res, 
 	
 	output [31:0] d_inst, d_pc
@@ -53,7 +53,7 @@ module Fetch
 	wire [31:0] pc, new_pc, pc_4;
 	wire [31:0] inst;
 
-	assign pc_4 = 4 + pc;
+	assign pc_4 = (stall) ? pc : pc + 4;
 	assign new_pc = (pc_src) ? add_res : pc_4;
 
 	PC program_counter(new_pc, clk, rst, 
@@ -61,8 +61,9 @@ module Fetch
 
 	reg [31:0] inst_mem [0:31];
 
-	assign inst = inst_mem[pc[31:2]];
-
+	assign inst = (stall) ? 32'b0 : inst_mem[pc[31:2]];
+	
+	
 	/** IFID **/
 	IFID IFID (clk, rst, pc_4, inst, 
 					d_pc, d_inst);
@@ -225,6 +226,63 @@ module IDEX
 		end
 	end
 endmodule
+
+module IDI
+(
+	/*input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
+	input [1:0] d_aluop, 
+	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
+	input [4:0] d_inst1, d_inst2, 
+	
+	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
+	output reg [1:0] e_aluop, 
+	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
+	output reg [4:0] e_inst1, e_inst2*/
+);
+
+/*	always @(posedge clk) 
+	begin
+		if (!rst) 
+		begin
+			e_regwrite <= 0;
+			e_memtoreg <= 0;
+			e_branch   <= 0;
+			e_memwrite <= 0;
+			e_memread  <= 0;
+			e_regdst   <= 0;
+			e_aluop    <= 0;
+			e_alusrc   <= 0;
+			e_pc       <= 0;
+			e_rd1      <= 0;
+			e_rd2      <= 0;
+			e_sigext   <= 0;
+			e_inst1    <= 0;
+			e_inst2    <= 0;
+		end
+		else 
+		begin
+			e_regwrite <= d_regwrite;
+			e_memtoreg <= d_memtoreg;
+			e_branch   <= d_branch;
+			e_memwrite <= d_memwrite;
+			e_memread  <= d_memread;
+			e_regdst   <= d_regdst;
+			e_aluop    <= d_aluop;
+			e_alusrc   <= d_alusrc;
+			e_pc       <= d_pc;
+			e_rd1      <= d_rd1;
+			e_rd2      <= d_rd2;
+			e_sigext   <= d_sigext;
+			e_inst1    <= d_inst1;
+			e_inst2    <= d_inst2;
+		end
+	end*/
+	
+	
+	//Score_Board sb();
+			
+endmodule
+
 
 module Issue
 (
