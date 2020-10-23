@@ -6,25 +6,47 @@ module pipemips
 	output [31:0] reg_writedata
 );
 
-	wire [31:0] d_inst, d_pc, e_pc, e_rd1, e_rd2, sig_ext, write_data, m_addres, add_res, m_alures, m_readdata, w_readData, w_alures, reg_writedata;
-	wire e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, w_regwrite, w_memtoreg, m_branch;
-	wire [1:0] e_aluop;
-	wire [4:0] e_inst1, e_inst2, e_muxRegDst, m_muxRegDst, w_muxRegDst;
+	wire [31:0] d_inst, d_pc, 
+	i_pc, i_rd1, i_rd2, i_sig_ext,
+	e_pc, e_rd1, e_rd2, e_sig_ext,
+	 sig_ext, write_data, 
+	m_addres, add_res, m_alures, m_readdata, 
+	w_readData, w_alures, reg_writedata;
+	
+	wire i_regwrite, i_memtoreg, i_branch, i_memwrite, i_memread, i_regdst, i_alusrc, 
+	e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
+	m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, 
+	w_regwrite, w_memtoreg, m_branch;
+	
+	wire [1:0] i_aluop, e_aluop;
+	wire [4:0] i_inst1, i_inst2, i_muxRegDst,  
+	e_inst1, e_inst2, e_muxRegDst,
+	m_muxRegDst, 
+	w_muxRegDst;
+	
 	wire pc_src, stall;
 
 
-	Fetch fetch (rst, stall, clk, pc_src, 
+	Fetch fetch (clk, rst, stall,  pc_src,  // input do fetch
 					
-					m_addres, d_inst, d_pc);
+					m_addres, d_inst, d_pc); //output do fetch
 
 
 	Decode decode (clk, rst, w_regwrite, d_inst, d_pc, reg_writedata, w_muxRegDst,
 	
-					e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
-					e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch);
+					i_rd1, i_rd2, sig_ext, i_pc, i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
+					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
 
+	/*Issue issue (clk, rst, 
+					i_rd1, i_rd2, i_sig_ext, i_pc, i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
+					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+					
+					e_rd1, e_rd2, e_sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
+					e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
+					
+					);*/
 
-	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
+	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, i_rd1, e_rd2, e_sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
 	
 						m_alures, m_addres, write_data, m_muxRegDst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite);
 
@@ -44,7 +66,7 @@ endmodule
 /** FETCH **/
 module Fetch // se stall == 1, insere nop
 (
-	input rst, stall, clk, pc_src, 
+	input clk,rst, stall,  pc_src, 
 	input [31:0] add_res, 
 	
 	output [31:0] d_inst, d_pc
@@ -63,7 +85,6 @@ module Fetch // se stall == 1, insere nop
 
 	assign inst = (stall) ? 32'b0 : inst_mem[pc[31:2]];
 	
-	
 	/** IFID **/
 	IFID IFID (clk, rst, pc_4, inst, 
 					d_pc, d_inst);
@@ -71,24 +92,41 @@ module Fetch // se stall == 1, insere nop
 	initial 
 	begin
 
-		$readmemb("tb/inst.mem",inst_mem, 0, 31);
-		
-		/*
-		inst_mem[0] <= 32'h00000000; // nop
-		inst_mem[1] <= 32'h8c010000; // lw r1, 0(r0)   =>   r1 = m[r0+0] 
-		inst_mem[2] <= 32'h8c020004; // lw r2, 4(r0)   =>   r2 = m[r0+4] 
-		inst_mem[3] <= 32'h00220820; // add r1,r1,r2   =>   r1 = r1 + r2 
-		inst_mem[4] <= 32'hac010008; // sw r1, 8(r0)   =>   m[r0+8] = r1
+		//$readmemb("tb/inst.mem",inst_mem, 0, 31);
+			
+		inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000 // nop 
+		inst_mem[1] <= 32'b001000_00000_01010_0000000000000101 // addi $t2,$zero,5
+		inst_mem[2] <= 32'b001000_00000_01011_0000000000000111 // addi $t3,$zero,7
+		inst_mem[3] <= 32'b001000_00000_01100_0000000000000010 // addi $t4,$zero,2
+		inst_mem[4] <= 32'b001000_00000_01101_0000000000000000 // addi $t5,$zero,0
+		inst_mem[5] <= 32'b000000_01010_01011_01010_00000_100000 // add $t2,$t2,$t3
+		inst_mem[6] <= 32'b000000_01011_01100_01011_00000_100000 // add $t3,$t3,$t4
+		inst_mem[7] <= 32'b000000_01100_01100_01100_00000_100000 // add $t4,$t4,$t4
+		inst_mem[8] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2
+		inst_mem[9] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[10] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[11] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[12] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[13] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[14] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[15] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[16] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
+		inst_mem[17] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[18] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[19] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[20] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[21] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[22] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[23] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[24] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[25] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[26] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[27] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[28] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[29] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[30] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[31] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
 
-		inst_mem[0] <= 32'h00000000; // nop
-		inst_mem[1] <= 32'h200a0005; // addi $t2,$zero,5
-		inst_mem[2] <= 32'h200b0007; // addi $t3,$zero,7
-		inst_mem[3] <= 32'h200c0002; // addi $t4,$zero,2
-		inst_mem[4] <= 32'h200d0003; // addi $t5,$zero,3
-		inst_mem[5] <= 32'h014b5020; // add $t2,$t2,$t3
-		inst_mem[6] <= 32'h016c5820; // add $t3,$t3,$t4
-		inst_mem[7] <= 32'h018c6020; // add $t4,$t4,$t4
-		inst_mem[8] <= 32'h01aa6820; // add $t5,$t5,$t2 */
 		end
 	endmodule
 
@@ -164,18 +202,20 @@ module Decode
 					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
 
-	ARF Registers (clk, regwrite, rs, rt, muxRegDst, writedata, 
+	ARF Registers (clk, regwrite, rs, rt, muxRegDst, writedata,  //
 					
 					data1, data2);
+	
+	//Reorder_Buffer();
 
-	/** IDEX **/
-	IDEX idex (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rd,
+	/** IDI **/
+	IDI idi (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rd,
 				e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2);
 
 
 endmodule
 
-module IDEX 
+module IDI 
 (
 	input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
 	input [1:0] d_aluop, 
@@ -227,20 +267,66 @@ module IDEX
 	end
 endmodule
 
-module IDI
-(
-	/*input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
-	input [1:0] d_aluop, 
-	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
-	input [4:0] d_inst1, d_inst2, 
+/** ISSUE **/ //MODULO INCOMPLETO
+//module Issue 
+//(
+
+
+/*Issue issue (clk, rst, 
+					i_rd1, i_rd2, sig_ext, i_pc,
+					 i_inst1, i_inst2,  i_alusrc, i_regdst, 
+					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+					
+					e_rd1, e_rd2, sig_ext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
+					e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
+					
+					);*/
+
+	/*input clk, rst,  
+	input [31:0] i_rd1, i_rd2, i_sigext, i_pc,
+	input [4:0] i_inst1, i_inst2, 
+	input [1:0] i_aluop,
+	input  i_alusrc, i_regdst, i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
 	
-	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
-	output reg [1:0] e_aluop, 
-	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
-	output reg [4:0] e_inst1, e_inst2*/
+	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, 
+	output [4:0] e_inst1, e_inst2, 
+	output [1:0] e_aluop, 
+	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
 );
 
-/*	always @(posedge clk) 
+*/
+
+	/** IEX **/
+	/*IEX iex (clk, rst, 
+					i_rd1, i_rd2, i_sigext, i_pc,
+					 i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
+					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+					
+					e_rd1, e_rd2, e_sigext, e_pc, e_inst1, e_inst2, e_aluop, e_alusrc, e_regdst, 
+					e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
+					
+					);
+
+
+endmodule*/
+
+
+/** IEX **/
+/*module IEX 
+(
+	input clk, rst,  
+	input [31:0] i_rd1, i_rd2, i_sigext, i_pc,
+	input [4:0] i_inst1, i_inst2, 
+	input [1:0] i_aluop,
+	input  i_alusrc, i_regdst, i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+	
+	output reg [31:0] e_rd1, e_rd2, e_sigext, e_pc, 
+	output reg [4:0] e_inst1, e_inst2, 
+	output reg [1:0] e_aluop, 
+	output reg e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
+);
+
+	always @(posedge clk) 
 	begin
 		if (!rst) 
 		begin
@@ -261,84 +347,26 @@ module IDI
 		end
 		else 
 		begin
-			e_regwrite <= d_regwrite;
-			e_memtoreg <= d_memtoreg;
-			e_branch   <= d_branch;
-			e_memwrite <= d_memwrite;
-			e_memread  <= d_memread;
-			e_regdst   <= d_regdst;
-			e_aluop    <= d_aluop;
-			e_alusrc   <= d_alusrc;
-			e_pc       <= d_pc;
-			e_rd1      <= d_rd1;
-			e_rd2      <= d_rd2;
-			e_sigext   <= d_sigext;
-			e_inst1    <= d_inst1;
-			e_inst2    <= d_inst2;
+			e_regwrite <= i_regwrite;
+			e_memtoreg <= i_memtoreg;
+			e_branch   <= i_branch;
+			e_memwrite <= i_memwrite;
+			e_memread  <= i_memread;
+			e_regdst   <= i_regdst;
+			e_aluop    <= i_aluop;
+			e_alusrc   <= i_alusrc;
+			e_pc       <= i_pc;
+			e_rd1      <= i_rd1;
+			e_rd2      <= i_rd2;
+			e_sigext   <= i_sigext;
+			e_inst1    <= i_inst1;
+			e_inst2    <= i_inst2;
 		end
-	end*/
-	
-	
-	//Score_Board sb();
-			
+	end
 endmodule
 
+*/
 
-module Issue
-(
-/*	input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
-	input [1:0] d_aluop, 
-	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
-	input [4:0] d_inst1, d_inst2, 
-	
-	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
-	output reg [1:0] e_aluop, 
-	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
-	output reg [4:0] e_inst1, e_inst2*/
-);
-
-/*	always @(posedge clk) 
-	begin
-		if (!rst) 
-		begin
-			e_regwrite <= 0;
-			e_memtoreg <= 0;
-			e_branch   <= 0;
-			e_memwrite <= 0;
-			e_memread  <= 0;
-			e_regdst   <= 0;
-			e_aluop    <= 0;
-			e_alusrc   <= 0;
-			e_pc       <= 0;
-			e_rd1      <= 0;
-			e_rd2      <= 0;
-			e_sigext   <= 0;
-			e_inst1    <= 0;
-			e_inst2    <= 0;
-		end
-		else 
-		begin
-			e_regwrite <= d_regwrite;
-			e_memtoreg <= d_memtoreg;
-			e_branch   <= d_branch;
-			e_memwrite <= d_memwrite;
-			e_memread  <= d_memread;
-			e_regdst   <= d_regdst;
-			e_aluop    <= d_aluop;
-			e_alusrc   <= d_alusrc;
-			e_pc       <= d_pc;
-			e_rd1      <= d_rd1;
-			e_rd2      <= d_rd2;
-			e_sigext   <= d_sigext;
-			e_inst1    <= d_inst1;
-			e_inst2    <= d_inst2;
-		end
-	end*/
-	
-	
-	//Score_Board sb();
-			
-endmodule
 
 /** EXECUTE **/
 module Execute 
@@ -377,6 +405,8 @@ module Execute
 					m_regwrite, m_memtoreg, m_zero, m_memread, m_memwrite, m_branch, m_addres, m_alures, m_rd2, m_muxRegDst);
 
 endmodule
+
+
 
 module Add 
 (
