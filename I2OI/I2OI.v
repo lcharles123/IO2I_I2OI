@@ -46,19 +46,19 @@ module pipemips
 					
 					);*/
 
-	Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, i_rd1, e_rd2, e_sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
+	/*Execute execute (clk, rst, e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, i_rd1, e_rd2, e_sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
 	
 						m_alures, m_addres, write_data, m_muxRegDst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite);
+*/
 
-
-	Memory memory (clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, m_alures, write_data, m_muxRegDst,
+	/*Memory memory (clk, rst, m_branch, m_zero, m_regwrite, m_memtoreg, m_memread, m_memwrite, m_alures, write_data, m_muxRegDst,
 		
 						w_readData, w_alures, w_memtoreg, w_regwrite, pc_src, w_muxRegDst);
+*/
 
-
-	Writeback writeback (w_readData, w_alures, w_memtoreg, 
+	/*Writeback writeback (w_readData, w_alures, w_memtoreg, 
 	
-							reg_writedata);
+							reg_writedata);*/
 
 endmodule
 
@@ -76,14 +76,14 @@ module Fetch // se stall == 1, insere nop
 	wire [31:0] inst;
 
 	assign pc_4 = (stall) ? pc : pc + 4;
-	assign new_pc = (pc_src) ? add_res : pc_4;
+	assign new_pc = (pc_src) ? add_res : pc_4; //decide se pc vem do fluxo normal ou de endereco de branch
 
 	PC program_counter(new_pc, clk, rst, 
 						pc);
 
 	reg [31:0] inst_mem [0:31];
 
-	assign inst = (stall) ? 32'b0 : inst_mem[pc[31:2]];
+	assign inst = (stall) ? 32'b0 : inst_mem[pc[31:2]]; // insere nop caso stall
 	
 	/** IFID **/
 	IFID IFID (clk, rst, pc_4, inst, 
@@ -92,40 +92,40 @@ module Fetch // se stall == 1, insere nop
 	initial 
 	begin
 
-		//$readmemb("tb/inst.mem",inst_mem, 0, 31);
+		//$readmemb("tb/inst.mem",inst_mem, 0, 31); //carrega de arquivo
 			
-		inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000 // nop 
-		inst_mem[1] <= 32'b001000_00000_01010_0000000000000101 // addi $t2,$zero,5
-		inst_mem[2] <= 32'b001000_00000_01011_0000000000000111 // addi $t3,$zero,7
-		inst_mem[3] <= 32'b001000_00000_01100_0000000000000010 // addi $t4,$zero,2
-		inst_mem[4] <= 32'b001000_00000_01101_0000000000000000 // addi $t5,$zero,0
-		inst_mem[5] <= 32'b000000_01010_01011_01010_00000_100000 // add $t2,$t2,$t3
-		inst_mem[6] <= 32'b000000_01011_01100_01011_00000_100000 // add $t3,$t3,$t4
-		inst_mem[7] <= 32'b000000_01100_01100_01100_00000_100000 // add $t4,$t4,$t4
-		inst_mem[8] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2
-		inst_mem[9] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[10] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[11] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[12] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[13] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[14] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[15] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[16] <= 32'b000000_01101_01010_01101_00000_100000 // add $t5,$t5,$t2 rep
-		inst_mem[17] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[18] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[19] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[20] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[21] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[22] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[23] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[24] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[25] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[26] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[27] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[28] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[29] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[30] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
-		inst_mem[31] <= 32'b00000001101010100110100000100000 // add $t5,$t5,$t2 rep
+		inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000; // nop 
+		inst_mem[1] <= 32'b001000_00000_01010_0000000000000101; // addi $t2,$zero,5
+		inst_mem[2] <= 32'b001000_00000_01011_0000000000000111; // addi $t3,$zero,7
+		inst_mem[3] <= 32'b001000_00000_01100_0000000000000010; // addi $t4,$zero,2
+		inst_mem[4] <= 32'b001000_00000_01101_0000000000000000; // addi $t5,$zero,0
+		inst_mem[5] <= 32'b000000_01010_01011_01010_00000_100000; // add $t2,$t2,$t3
+		inst_mem[6] <= 32'b000000_01011_01100_01011_00000_100000; // add $t3,$t3,$t4
+		inst_mem[7] <= 32'b000000_01100_01100_01100_00000_100000; // add $t4,$t4,$t4
+		inst_mem[8] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2
+		inst_mem[9] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[10] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[11] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[12] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[13] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[14] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[15] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[16] <= 32'b000000_01101_01010_01101_00000_100000; // add $t5,$t5,$t2 rep
+		inst_mem[17] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[18] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[19] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[20] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[21] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[22] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[23] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[24] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[25] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[26] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[27] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[28] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[29] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[30] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
+		inst_mem[31] <= 32'b00000001101010100110100000100000; // add $t5,$t5,$t2 rep
 
 		end
 	endmodule
@@ -171,6 +171,12 @@ module IFID
 	end
 endmodule
 
+
+//OK ATE AQUI
+//ate aqui estamos trazendo os sinais de instrucao e PC
+//mas exige o endereco do branch e o sinal de stall
+
+
 /** DECODE **/
 module Decode 
 (
@@ -184,32 +190,38 @@ module Decode
 	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
 );
   
-	wire [31:0] data1, data2, sig_ext;
-	wire [4:0] rs, rt, rd;
+	wire [31:0] data1, data2, sig_ext; 
+	wire [4:0] rA, rB, rC; 
 	wire [5:0] opcode;
 	wire [1:0] aluop;
 	wire branch, memread, memtoreg, memwrite, regdst, alusrc, regwrite, regwrite_out;
 
-	assign opcode = inst[31:26];
-	assign rs = inst[25:21];
-	assign rt = inst[20:16];
-	assign rd = inst[15:11];
+	assign opcode = inst[31:26]; //opcode
+	assign rA = inst[25:21];    //rs 
+	assign rB = inst[20:16];    //rt 
+	assign rC = inst[15:11];    //rd destino, caso seja tipo R
 
 	assign sig_ext = (inst[15]) ? {16'd1,inst[15:0]} : {16'd0,inst[15:0]}; // extensor de sinal coloca 1 se negativo, 0 caso contrario
 
-	Control control (opcode, 
+	Control control (opcode, //entrada e saidas dos sinais de controle, saidas serao ligadas no modulo superior
 					
 					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
 
-	ARF Registers (clk, regwrite, rs, rt, muxRegDst, writedata,  //
+	PRF Registers (clk, regwrite, rA, rB, muxRegDst, writedata,  //
 					
 					data1, data2);
 	
 	//Reorder_Buffer();
 
+
+
+
+
+
+
 	/** IDI **/
-	IDI idi (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rd,
+	IDI idi (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rC,
 				e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2);
 
 
@@ -699,42 +711,48 @@ module Alucontrol
 endmodule
 
 
-/** modulos auxiliares do superscalar **/
-
+/** modulos auxiliares **/
+// score board eh uma tabela com 32 linhas que representa o estado dos registradores,
+// os estados estao divididos por colunas e incluem 
+// pendente: bit/coluna 7 indicando se alguma instrucao escrevera nele, bit [6:5] indicam qual unidade funconal escrevera no registrador dentre 00: ALU; 01:Load; 10: Store; 11: Mul
+// bits [4:0] indicam em que lugar no pipeline o dado esta, esses dados podem ser usados para fazer encaminhamento
 
 module Score_Board 
 (
-	input [5:0] linha, //linha no scoreboard 2**5 == 32 registradores
-	input escrever,//se eh um acesso de escrita
-	input [7:0] in_valor, //valor de escrita, [0] == pendente?; [1:2] == nome unidade funcional; [3:7] == localizacao do dado
+	input clk,
+	input [5:0] regist, //registrador que sera alterado 2**5 == 32 registradores (regist == 0 eh ignorado)
+	input [7:0] valor, //valor de escrita para a linha inteira, colocar o 1 no dado disponivel no estagio correto no SB
+						//valor[7] == pendente; valor[6:5] == nome unidade funcional; valor[4:0] == localizacao do dado
 	
-	output [7:0] out_valor //valor para leitura
-);
-	reg [7:0] out_valor;
-	
+	output pendente [0:31]; //valor para leitura sera toda a coluna "Pendente", basta usar os enderecos de regA e regB nessa saida
+							//para termos o estado, havera apenas essa saida pois nao existira encaminhamentos por enquanto
+);	
+	reg [0:31] pendente;
 	reg [7:0] sb [0:31]; // 32 linhas de 8 bits cada
+
+	assign pendente <= [7]sb; //coluna de 1 bit indicando pendente vai para saida 
+	assign [7]sb <= [6:5]sb ~^ [0]sb; //apenas coloc
+	//initial sb = 0; //inicializar valores == 0, e valor de regist[0] == pendente colocar valor 
 	
-	always @(*)
+	always @(posedge clk)
 	begin
-		if(escrever)
+		if(regist) //nao atualiza o registrador 0
 		begin
-			sb[linha] = in_valor;
-			out_valor = sb[linha];
+			sb[regist] <= valor;
 		end
-		else
-		begin
-			out_valor <= sb[linha];
-		end
+		/** faz o dado andar nas colunas dado disponivel **/
+		//shift 0 >> sb[4:0]
+		
 	end
 
 endmodule
 
 
-module PRF // registradores auxiliares
+module Physical_Register_File // registradores auxiliares
 (
-	input clk, regwrite, 
-	input [4:0] read1, read2, writereg, 
-	input [31:0] writedata, 
+	input clk, regwrite, 				//sinal clock e permissao escrita
+	input [4:0] read1, read2, writereg,  //enderecos de leitura e escrita
+	input [31:0] writedata, 			//dado para escrita
 	
 	output [31:0] data1, data2
 );
@@ -744,56 +762,66 @@ module PRF // registradores auxiliares
 	// Popular os registradores
 	//initial $readmemh("tb/dados.mem", memory, 0, 31);
 	integer i;
-	initial for(i = 0; i < 32; i = i+1) memory_tmp[i] = 0;
+	initial for(i = 0; i < 32; i = i+1) memory_tmp[i] = 0; 
 
-	assign data1 = (regwrite && read1==writereg) ? writedata : memory_tmp[read1];
-	assign data2 = (regwrite && read2==writereg) ? writedata : memory_tmp[read2];
+	assign data1 = (regwrite && read1==writereg) ? writedata : memory_tmp[read1];//faz dado1 ser escrito no inicio do ciclo com a possibilidade de ser lido no final
+	assign data2 = (regwrite && read2==writereg) ? writedata : memory_tmp[read2]; //mesma coisa pra dado2
 
 	always @(posedge clk) 
 	begin
     	if (regwrite)
-        	memory_tmp[writereg] <= writedata;
+        	memory_tmp[writereg] <= writedata;//apenas escreve, caso seja possivel
   	end
   
 endmodule
 
-module ARF  //registradores principais da maquina
+module Architetural_Register_File  //banco de registradores principais da maquina
 (
-	input clk, regwrite, 
-	input [4:0] read1, read2, writereg, 
-	input [31:0] writedata, 
+	input clk, regwrite, 				//sinais de controle
+	input [4:0] read1, read2, writereg, //enderecos de regs leitura1, leitura2 e escrita
+	input [31:0] writedata, 			//dado para escrita
 	
-	output [31:0] data1, data2
+	output [31:0] data1, data2			//saida do dado1 e dado2
 );
 
 	reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
 
 	// Popular os registradores
-	initial $readmemh("tb/dados.mem", memory, 0, 31);
+	//initial $readmemh("tb/dados.mem", memory, 0, 31);
+	integer i;
+	initial for(i = 0; i < 32; i = i+1) memory_tmp[i] = 0; 
 
-
-	assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1];
-	assign data2 = (regwrite && read2==writereg) ? writedata : memory[read2];
+	assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1]; //faz dado1 ser escrito no inicio do ciclo com a possibilidade de ser lido no final
+	assign data2 = (regwrite && read2==writereg) ? writedata : memory[read2]; //mesma coisa com dado2
 
 	always @(posedge clk) 
 	begin
     	if (regwrite)
-        	memory[writereg] <= writedata;
+        	memory[writereg] <= writedata; //apenas escreve, caso seja possivel
   	end
   
 endmodule
 
 
-module Reorder_Buffer //https://esrd2014.blogspot.com/p/first-in-first-out-buffer.html
+
+
+//instancia no decode, ler linha com Preg especifico: 
+//decode ira procurar por instrucao pronta, i.e. ROB recebe endereco Preg na variavel dado_in[4:0] com lerEscrever == 00
+//dado_out retornara o resultado.
+
+//instancia no WB, escrever apenas:
+// lerEscrever == 10 , dado_in == linha da instrucao para entrar na fila, testar se !cheio antes de
+
+module Reorder_Buffer // https://esrd2014.blogspot.com/p/first-in-first-out-buffer.html
 (
 	// descricao do dado_in e dado_out abaixo
 	// State: (Free, Pending, Finished) [9:8] 3 estados para representar
 	// S: especulativo  [7]
 	// ST: Store bit [6]
 	// V: destino PRF valido [5]
-	// Preg: end PRF [4:0]  2**5 registradores no PRF
+	// Preg: end PRF [4:0]  2**5 registradores no PRF 
 	input clk, rst, 
-	input [1:0] lerEscrever, //[1] == leitura; [0] == escrita
+	input [1:0] lerEscrever, // 00 ler linha especificada por Preg ; 10 entra dado ; 01 sai dado ; 11 atualizar linha especifica por Preg
 	input [9:0] dado_in, 
 
 	output [9:0] dado_out,
@@ -805,7 +833,7 @@ module Reorder_Buffer //https://esrd2014.blogspot.com/p/first-in-first-out-buffe
 
 	reg [9:0] fila [7:0]; //fila possui 10 bits por linha e 8 linhas
 
-    assign cheio = (contador == 3'b111) ? 1'b1 : 1'b0 ; //quando o rob estiver cheio
+    assign cheio = (contador == 3'b111) ? 1'b1 : 1'b0 ; //avisa quando o rob estiver cheio
 
     always @(posedge clk) 
     begin 
@@ -814,17 +842,25 @@ module Reorder_Buffer //https://esrd2014.blogspot.com/p/first-in-first-out-buffe
 			if (lerEscrever == 2'b10 && contador != 3'b0) // se leitura e fila nao vazia
 			begin 
 				dado_out = fila[inicio]; // ler inicio da fila
-				inicio = inicio + 1;//leitor ++
+				inicio = inicio + 1;//fila andando
   			end 
   			else if (lerEscrever == 2'b01 && contador < 8) // se escrita e fila nao cheia
   			begin
   				fila[fim] = dado_in;
   				fim = fim + 1;
+  			end 
+  			else if (lerEscrever == 2'b00)
+  			begin
+  				;//dado_out <= fila[ fila[4:0] ]; //comparar Preg e retornar a linha correspondente
+  			end
+  			else if (lerEscrever == 2'b11)
+  			begin
+  				;//fila[9:8] <= atualizar
   			end
    			
    			if(fim == 8) //se algum contador chegou na posicao 8, volta pra 0
    				fim = 0;
-   			else if(inicio == 8)
+   			if(inicio == 8)
    				inicio = 0;
    			
    			if(inicio > fim)
@@ -841,3 +877,77 @@ module Reorder_Buffer //https://esrd2014.blogspot.com/p/first-in-first-out-buffe
 	end
 endmodule
 
+
+// FSB: escrito no wb e lido e apagado apos o commit
+// serve apenas para instrucoes de store e 
+module Finished_Store_Buffer(
+
+	input clk,	
+	input [1:0] lerEscrever, // 10 apenas commit para memoria quando cheio, 01 apenas escreve nele quando vazio , 11 ou 00 nao muda o estado
+	input [1:0] oper, //operacao que gerou o dado, utilidade?
+	input [31:0] endereco_in, // endereco de escrita na memoria
+	input [31:0] dado_in,	// dado para a escrita
+	
+	output [31:0] endereco_out, //saidas
+	output [31:0] dado_out,
+	output vazio //saida do bit de validade
+);
+
+	reg [31:0] endereco_out, dado_out; //saidas que serao os elementos de memoria para armazenar o valor
+	reg [1:0] oper; //operacao, descobrir para que serve
+	reg vazio;
+
+	initial
+	begin
+		endereco <= 32'b0;
+		dado <= 32'b0;
+		vazio <= 1'b1; //indica vazio
+	end
+	
+	always @(posedge clk)
+	begin
+		if(vazio && lerEscrever == 2'b01) // se esta vazio e um dado vai ser escrito nele
+		begin
+			endereco_out <= endereco_in;
+			dado_out <= dado_in;
+			vazio <= 1'b0; //muda para cheio
+		end
+		else if(!vazio && lerEscrever == 2'b10) // se esta cheio e um dado sera escrito na memoria
+		begin
+			vazio <= 1'b1; //apenas muda bit de validade para vazio
+		end
+			// 00 ou 11 e vazio == 0, o dado eh valido, entao a saida ja estara ativa
+	end
+endmodule
+
+
+module Issue_Queue(
+
+	//ver na net
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+endmodule
