@@ -85,7 +85,7 @@ module Fetch // se stall == 1, insere nop
 	begin
 
 		//$readmemb("tb/inst.mem",inst_mem, 0, 31); //carrega de arquivo
-			
+		
 		inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000; // nop 
 		inst_mem[1] <= 32'b001000_00000_01010_0000000000000101; // addi $t2,$zero,5
 		inst_mem[2] <= 32'b001000_00000_01011_0000000000000111; // addi $t3,$zero,7
@@ -662,27 +662,82 @@ endmodule
 module Score_Board 
 (
 	input clk, rst,
-	input [5:0] regist, //registrador que sera alterado 2**5 == 32 registradores (regist == 0 eh ignorado) , entrada do rD
-	input [1:0] unidade_funcional, //unidade funcional, indica qual pipeline e onde ficara os 1s na tabela
+	input [5:0] regD, //end do reg de destino para alterar para pendente (regist == 0 eh ignorado) ,
+	input [1:0] unidade_fun_in, //unidade funcional, indica qual pipeline o dado vai entrar
 	
-	output pendente [0:31]; //valor para leitura sera toda a coluna "Pendente", basta usar os enderecos de regA e regB nessa saida
+	output pendente [0:31]; //valor de toda a coluna "Pendente", basta usar os enderecos de regA, regB, regC nessa saida
 );	
-	reg [0:31] pendente;
-	reg [7:0] sb [0:31]; // 32 linhas de 8 bits cada
 
-	assign pendente <= [7]sb; //coluna de 1 bit indicando pendente vai para saida 
-	assign [7]sb <= [6:5]sb ~^ [0]sb; //apenas coloc
+	reg		  pendente [0:31]; // 32 linhas de 1 bit cada , indexavel
+	reg [1:0] unidade_funcional [0:31]; // indica qual pipeline escrevera no registrador
+	reg [4:0] dado_disponivel [0:31]; //dado disponivel 32 linhas de 5 bits cada
+	integer i;
+	//reg [9:0] temp; 
+	//a tabela pode ser interpretada como
+	//	pendente	dado_disponivel
+	//[8:7]|[6:5] | [4:0]
+	//	P	  F		posicao no pipeline
+	
+	//assign pendente <= sb; //coluna de 1 bit indicando pendente vai para saida 
+	//assign [7]sb <= [6:5]sb ~^ [0]sb; //apenas coloc
 	//initial sb = 0; //inicializar valores == 0, e valor de regist[0] == pendente colocar valor 
+	
+	//o scoreboard vai receber o endereco do registrador a ser escrito e colocar a linha correspondente a ele.
+	//ela sera atualizada automaticamente no proprio scoreboard com um shift nos bits. bit na coluna 0 indica dado no writeback
+	//assign pen
 	
 	always @(posedge clk)
 	begin
-		if(regist) //nao atualiza o registrador 0
+		if(!rst) //nao atualiza o registrador 0
 		begin
-			sb[regist] <= valor;
-		end
-		// faz o dado andar nas colunas dado disponivel 
-		//shift 0 >> sb[4:0]
-		
+			case(unidade_fun_in) //preenche a linha com os dados de determinado pipeline
+			begin
+				2'b00 : //ALU
+				begin
+					pendente[regD] <= 1'b_1;
+					dado_disponivel[regD] <= 5'b_0_0_0_1_0;
+				end
+				2'b01 :	//Load
+				begin
+					pendente[regD] <= 1'b_1;
+					dado_disponivel[regD] <= 5'b_0_0_1_0_0;
+				end
+				2'b10 :	//Store
+				begin
+					pendente[regD] <= 1'b_1;
+					dado_disponivel[regD] <= 5'b_0_0_0_1_0;
+				end
+				2'b11 :	//MUL
+				begin
+					pendente[regD] <= 1'b_1;
+					dado_disponivel[regD] <= 5'b_1_0_0_0_0;
+				end
+			end
+		// faz o dado andar nas linhas
+			for(i = 0; i < 32; i = i + 1)
+				case(dado_disponivel[i]) //faz os bits andarem nas colunas dado disponivel
+				begin
+					5'b1_0_0_0_0 : //caso o dado esteja na posicao sb[i][4], move para sb[i][3]
+					begin
+						dado_disponivel[i] <= 5'b_0_1_0_0_0;
+					end
+					5'b0_1_0_0_0 :	//Load
+					begin
+						dado_disponivel[i] <= 5'b_0_0_1_0_0;
+					end
+					5'b_0_0_1_0_0 :	//Store
+					begin
+						dado_disponivel[i] <= 5'b_0_0_0_1_0;
+					end
+					5'b_0_0_0_1_0 :	
+					begin
+						dado_disponivel[i] <= 5'b_0_0_0_0_1;
+					end	
+					5'b_0_0_0_0_1 :	
+					begin
+						dado_disponivel[i] <= 5'b_0_0_0_0_0;
+					end
+				end
 	end
 
 endmodule
