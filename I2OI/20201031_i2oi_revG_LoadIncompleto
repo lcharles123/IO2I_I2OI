@@ -4,9 +4,12 @@ module pipemips
 	input clk, rst, stall, regwrite,
     input [4:0] muxRegDst,
   
-  output [31:0] x_aluout, L1_load_aluout,
-    output [4:0]  x_register_store_adress,  L1_register_store_adress
+  	//output [31:0] x_aluout, L1_load_aluout,
+    //output [4:0]  x_register_store_adress,  L1_register_store_adress
+  output [31:0]  L0_load_aluout, output [4:0] L0_register_store_adress
+    
 );  
+  	wire stall;
   	//Variaveis Fetch
 	wire [31:0] d_inst, d_pc;	
 	wire pc_src, stall, m_addres;
@@ -43,12 +46,12 @@ module pipemips
   
   
   	
-  	Decode decode (clk, rst, regwrite, d_inst, d_pc, writedata, muxRegDst, 
+  Decode decode (clk, rst, stall, regwrite, d_inst, d_pc, writedata, muxRegDst, 
                  
                    i_rd1, i_rd2, sig_ext, i_pc, i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
 					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
   
-  	Issue issue (clk, rst, 
+  Issue issue (clk, rst, stall,
 				i_rd1, i_rd2, sig_ext, i_pc, i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
 				i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
 					
@@ -58,14 +61,14 @@ module pipemips
   	X0 x0 (clk, rst, e_alusrc, e_regdst, e_rd1, e_rd2, e_sig_ext, e_pc, e_inst1, e_inst2, e_aluop, 
 
         	x_aluout, x_register_store_adress);
-
+					//?        end inst 1 e 2	//regA	imm
   	L0 l0 (clk, rst, e_regdst, e_inst1, e_inst2, e_rd1, e_sig_ext,
 
            L0_load_aluout, L0_register_store_adress);
   
-  	L1 l1 (clk, rst, L0_load_aluout, L0_register_store_adress,
+  	//L1 l1 (clk, rst, L0_load_aluout, L0_register_store_adress,
 
-           L1_load_aluout, L1_register_store_adress);
+          // L1_load_aluout, L1_register_store_adress);
   
 			
 endmodule
@@ -94,7 +97,7 @@ module Fetch // se stall == 1, insere nop
 	assign inst = (stall) ? 32'b0 : inst_mem[pc[31:2]]; // insere nop caso stall
 	
 	/** IFID **/
-	IFID IFID (clk, rst, pc_4, inst, 
+  IFID IFID (clk, rst, stall, pc_4, inst, 
 					d_pc, d_inst);
 
 	initial 
@@ -136,7 +139,7 @@ module Fetch // se stall == 1, insere nop
 */
       
       // ----- LD
-      	inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000; // nop 
+     /* 	inst_mem[0] <= 32'b000000_00000_00000_00000_00000_000000; // nop 
 		inst_mem[1] <= 32'b001001_00010_00100_0000000000000000; // addi $t2,$zero,5
 		inst_mem[2] <= 32'b001001_00010_00100_0000000000000000; // addi $t3,$zero,7
 		inst_mem[3] <= 32'b001001_00010_00100_0000000000000000; // addi $t4,$zero,2
@@ -168,23 +171,26 @@ module Fetch // se stall == 1, insere nop
 		inst_mem[29] <= 32'b001001_00010_00100_0000000000000000; // add $t5,$t5,$t2 rep
 		inst_mem[30] <= 32'b001001_00010_00100_0000000000000000; // add $t5,$t5,$t2 rep
       	inst_mem[31] <= 32'b001001_00010_00100_0000000000000000; // add $t5,$t5,$t2 rep
-
-      /*
-      	inst_mem[0] <= 32'b00000000000000000000000000000000; // nop
+*/
+      
+		inst_mem[0] <= 32'b00000000000000000000000000000000; // nop
 		inst_mem[1] <= 32'b001001_00000_00010_0000000000000000; // lw 0(r0) -> r2 
 		inst_mem[2] <= 32'b00000000000000000000000000000000; // nop
 		inst_mem[3] <= 32'b00000000000000000000000000000000; // nop
 		inst_mem[4] <= 32'b00000000000000000000000000000000; // nop
-		inst_mem[5] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[5] <= 32'b001001_00000_00011_0000000000000001; // lw 1(r0) -> r3
 		inst_mem[6] <= 32'b00000000000000000000000000000000; // nop
-      	inst_mem[7] <= 32'b001001_00000_00011_00000000000;
-      	inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
-      	inst_mem[9] <= 32'b00000000000000000000000000000000; // nop
-      	inst_mem[10] <= 32'b00000000000000000000000000000000; // nop
-      	inst_mem[11] <= 32'b00000000000000000000000000000000; // nop
-      	inst_mem[12] <= 32'b00000000000000000000000000000000; // nop
-        */
-        
+		inst_mem[7] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[9] <= 32'b000001_00010_00011_00100_00000000001; // add r2 r3 -> r4 
+		inst_mem[10] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[11] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[12] <= 32'b00000000000000000000000000000000; // nop
+	/*	inst_mem[17] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[18] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[19] <= 32'b001000_00000_00100_0000000000000010; // sw 2(r0) <- r4
+		inst_mem[20] <= 32'b00000000000000000000000000000000; // nop
+		//*/  
         
 		end
 	endmodule
@@ -210,7 +216,7 @@ endmodule
 
 module IFID 
 (
-	input clk, f_rst, 
+	input clk, f_rst, stall,
 	input [31:0] f_pc, f_inst, 
 	
 	output reg [31:0] d_pc, d_inst
@@ -223,7 +229,7 @@ module IFID
 			d_inst <= 0;
 			d_pc   <= 0;
 		end
-		else 
+      else if(!stall)
 		begin
 			d_inst <= f_inst;
 			d_pc   <= f_pc;
@@ -235,7 +241,7 @@ endmodule
 // DECODE
 module Decode 
 (
-	input clk, rst, 
+	input clk, rst, stall, //ok aqui, mas nao funciona no IDI
     input regwrite, 
   	input [31:0] inst, pc, writedata, 
     input [4:0] muxRegDst, 
@@ -271,7 +277,7 @@ module Decode
 	//Reorder_Buffer();
 
 	// IDI
-	IDI idi (clk, rst, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rt, rC,
+  IDI idi (clk, rst,stall, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, sig_ext, rA, rB,
 			 e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2);
 
 
@@ -279,7 +285,7 @@ endmodule
 
 module IDI 
 (
-	input clk, rst, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
+	input clk, rst,stall, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
 	input [1:0] d_aluop, 
 	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
 	input [4:0] d_inst1, d_inst2, 
@@ -309,7 +315,7 @@ module IDI
 			e_inst1    <= 0;
 			e_inst2    <= 0;
 		end
-		else 
+      else if(!stall)
 		begin
 			e_regwrite <= d_regwrite;
 			e_memtoreg <= d_memtoreg;
@@ -421,7 +427,7 @@ module Register_Bank (input clk, regwrite, input [4:0] read1, read2, writereg, i
   // Inicializa a memória
   initial begin
     for (i = 0; i <= 31; i++) 
-      memory[i] <= i;
+      memory[i] <= i+1;
   end
     
   assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1];
@@ -436,7 +442,7 @@ endmodule
 
 module Issue 
   (
-	input clk, rst,  
+	input clk, rst, stall, 
 	input [31:0] i_rd1, i_rd2, i_sigext, i_pc,
 	input [4:0] i_inst1, i_inst2, 
 	input [1:0] i_aluop,
@@ -452,7 +458,7 @@ module Issue
   SelectExPipe select_ex_pipe(clk, i_regwrite, i_branch, i_memread, i_memwrite, 
                    select_execute); 
         
-  IEX iex (clk, rst, 
+  IEX iex (clk, rst, stall,
            i_rd1, i_rd2, i_sigext, i_pc,
            i_inst1, i_inst2, 
            i_aluop, select_execute,
@@ -498,7 +504,7 @@ endmodule
 // IEX 
 module IEX 
 (
-	input clk, rst,  
+	input clk, rst, stall, 
 	input [31:0] i_rd1, i_rd2, i_sigext, i_pc,
 	input [4:0] i_inst1, i_inst2, 
   	input [1:0] i_aluop, select_execute,
@@ -529,7 +535,7 @@ module IEX
 			e_inst2    <= 0;
           	e_select_execute <= 0;
 		end
-		else 
+      else if(!stall)
 		begin
 			e_regwrite <= i_regwrite;
 			e_memtoreg <= i_memtoreg;
@@ -565,7 +571,7 @@ module X0
   wire [3:0] aluctrl;
   wire e_zero;
   
-  Add Add (e_pc, e_sigext,
+  Add Add (e_pc, e_sigext, //soma o PC com o offset
                    e_addres);
 
   assign alu_B = (e_alusrc) ? e_sigext : e_in2 ;
@@ -604,7 +610,7 @@ module X0W (
     end
 endmodule
       
-module Add 
+module Add //add para o pc
 (
 	input [31:0] pc, shiftleft2, 
 	
@@ -675,8 +681,8 @@ module Alucontrol
 endmodule
            
 module L0 (
-  input clk, rst, e_regdst,
-  input [4:0] e_inst20_16, e_inst15_11,
+  input clk, rst, e_regdst, //
+  input [4:0] e_rA, e_rB, //rA e rB==rD da instrucao de load ou store
   input [31:0] e_rd1, e_sigext,
 	
   output [31:0] L0_load_aluout,
@@ -686,8 +692,8 @@ module L0 (
   
   ALU alu (4'b0010, e_rd1, e_sigext, 
            load_aluout, load_zero);
-  
-  assign register_store_adress = (e_regdst) ? e_inst15_11 : e_inst20_16;
+  //end do registrador a ser usado como destino: load; ou origem: store
+  assign register_store_adress = (e_regdst) ? e_rB : e_rA; //rA == load, rB == store
   
   L0L1 l0l1(clk, rst, load_aluout, register_store_adress,
             L0_load_aluout, L0_register_store_adress);
@@ -695,7 +701,9 @@ endmodule
            
 module L0L1 (
     input clk, rst,
-  	input [31:0] load_aluout, e_register_store_adress,
+  	input [31:0] load_aluout, 
+  	input [4:0] e_register_store_adress,
+  	
     output [31:0] L0_load_aluout, 
     output [4:0] L0_register_store_adress
 );
@@ -767,8 +775,8 @@ module Memory (
 
   // Inicializa a memória
   initial begin
-    for (i = 0; i <= 31; i++) 
-      memory[i] <= i;
+    for (i = 0; i <= 31; i= i + 1) 
+      memory[i] <= 5;
   end
     
   always @(posedge clk) begin
