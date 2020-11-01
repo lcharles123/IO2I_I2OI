@@ -12,5 +12,6 @@ O código é escrito na linguagem verilog e descreve o comportamento de duas org
 # Usando o repositorio:
 
 Usar o Makefile que se encontra na pasta I2OI 
+Ou o simulador em https://digitaljs.tilk.eu/ 
 
 Desenvolver I2OI primeiro.
