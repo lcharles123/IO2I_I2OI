@@ -4,12 +4,14 @@ module pipemips
 	input clk, rst, stall, permitEscrita,
     input [4:0] w_regC,
   
-  	//output [31:0] x_aluout, L1_load_aluout,
-    //output [4:0]  x_register_store_adress,  L1_register_store_adress
-  	output [31:0]  L0_load_aluout, output [4:0] L0_register_store_adress,
+  	output [31:0] x_aluout, 
+    output [4:0]  x_register_store_adress,  
+    output [4:0]  L0_register_store_adress, L1_register_store_adress,
+    output [4:0]  S0_register_store_adress,
+  	output [31:0]  L0_load_aluout, L1_load_aluout,
+    output [31:0]  S0_store_value,
   
  	output [31:0]  mul3_res, output [4:0] mul3_endRegC
-    
 );  
   	wire stall;
   	//Variaveis Fetch
@@ -40,6 +42,10 @@ module pipemips
   	//Variaveis L
     wire[31:0] L0_load_aluout, L1_load_aluout;
   	wire[4:0]  L0_register_store_adress, L1_register_store_adress;
+  	
+  	//Variáveis S
+    wire[31:0] S0_store_value;
+    wire[4:0]  S0_register_store_adress;
 
   	//Variaveis MUL
     wire[31:0] mul0_res ,	 mul1_res, 	   mul2_res ,	 mul3_res    ;
@@ -74,6 +80,10 @@ module pipemips
   	L1 l1 (clk, rst, L0_load_aluout, L0_register_store_adress,
 
            L1_load_aluout, L1_register_store_adress);
+           
+	S0 s0 (clk, rst, e_regdst, e_inst1, e_inst2, e_sigext,
+
+           S0_store_value, S0_register_store_adresss);
   
   									//endRegC aqui
   	M0 m0(clk, rst,  e_rd1, e_rd2, 5'b00111,
@@ -279,7 +289,7 @@ module IDI
 	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
 	output reg [1:0] e_aluop, 
 	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
-	output reg [4:0] e_inst1, e_inst2, e_instt3
+	output reg [4:0] e_inst1, e_inst2, e_inst3
 );
 
 	always @(posedge clk) 
@@ -779,6 +789,55 @@ module Memory (
       memory[memory_addres] <= writedata;
     end
   end
+endmodule
+
+
+//STORE
+//rA endereço de destino
+//rB + offset endereço source
+//rd1 valor a ser salvo
+module S0 (
+  input clk, rst, e_regdst, 
+  input [4:0] e_rA, e_rB, 	//
+  input [31:0] e_sigext,
+
+  output [31:0] S0_store_value, 
+  output [4:0] S0_register_store_adresss
+);
+  
+  wire [4:0] register_store_adress;
+  wire [31:0] store_aluout;
+  
+  ALU alu (4'b0010, e_rB, e_sigext[15:0], //calculo do endereço com offset
+           store_aluout, load_zero);
+
+  S0M s0m (clk, rst, store_aluout, e_rA,
+           S0_store_value, S0_register_store_adresss);
+  
+endmodule
+
+module S0M (
+  input clk, rst, 
+  input [31:0] store_aluout, 
+  input [4:0] store_adress,
+
+  output [31:0] store_value, 
+  output [4:0] register_store_adresss
+    
+);
+    always @(posedge clk) 
+	begin
+		if (!rst) 
+		  begin
+         	store_value 			 <= 0;
+        	register_store_adresss <= 0;
+		end
+		else 
+          begin
+			store_value 		   <= store_aluout;
+          	register_store_adresss <= store_adresss;
+        end
+    end
 endmodule
 
 
