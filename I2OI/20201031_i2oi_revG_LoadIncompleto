@@ -11,7 +11,10 @@ module pipemips
   	output [31:0]  L0_load_aluout, L1_load_aluout,
     output [31:0]  S0_store_value,
   
- 	output [31:0]  mul3_res, output [4:0] mul3_endRegC
+ 	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
+ 	
+ 	output [31:0] dado_regC,
+	output [4:0] endRegC
 );  
   	wire stall;
   	//Variaveis Fetch
@@ -50,7 +53,10 @@ module pipemips
   	//Variaveis MUL
     wire[31:0] mul0_res ,	 mul1_res, 	   mul2_res ,	 mul3_res    ;
   	wire[4:0]  mul0_endRegC, mul1_endRegC, mul2_endRegC, mul3_endRegC;
-
+  	
+  	//variaveis writeback
+	wire [31:0] dado_regC;
+	wire [4:0] endRegC;
 
 	Fetch fetch (clk, rst, stall,  pc_src, m_addres, // input do fetch
             
@@ -83,7 +89,7 @@ module pipemips
            
 	S0 s0 (clk, rst, e_regdst, e_inst1, e_inst2, e_sigext,
 
-           S0_store_value, S0_register_store_adresss);
+           S0_store_value, S0_register_store_adress);
   
   									//endRegC aqui
   	M0 m0(clk, rst,  e_rd1, e_rd2, 5'b00111,
@@ -95,7 +101,8 @@ module pipemips
   	M3 m3(clk, rst, mul2_res, mul2_endRegC,
   			mul3_res, mul3_endRegC);
 
-//modulo writeback nao existe nesse, o resultado dos pipelines sao escritos direto no endereco do banco de registradores writedata, w_regC
+	WB wb(clk, rst, 2'b00, x_aluout, x_register_store_adress, L1_load_aluout, L1_register_store_adress,S0_store_value, S0_register_store_adress, mul3_res, mul3_endRegC,
+	dado_regC,	endRegC);
 
 			
 endmodule
@@ -802,7 +809,7 @@ module S0 (
   input [31:0] e_sigext,
 
   output [31:0] S0_store_value, 
-  output [4:0] S0_register_store_adresss
+  output [4:0] S0_register_store_adress
 );
   
   wire [4:0] register_store_adress;
@@ -812,7 +819,7 @@ module S0 (
            store_aluout, load_zero);
 
   S0M s0m (clk, rst, store_aluout, e_rA,
-           S0_store_value, S0_register_store_adresss);
+           S0_store_value, S0_register_store_adress);
   
 endmodule
 
@@ -981,9 +988,52 @@ module M3W(
 endmodule
 
 
-//module WB
+module WB(
+
+	input clk, rst, 
+	input [1:0] fonte, //indica a fonte do dado
+	//X0
+	input [31:0] x_aluout, 
+	input [4:0]  x_register_store_adress,
+	//Load
+	input [31:0] L0_load_aluout,
+  	input [4:0] L0_register_store_adress,
+	//Store
+	input [31:0] S0_store_value, 
+    input [4:0] S0_register_store_adress,
+    //Multiplicacao
+    input [31:0] M_regC,
+	input [4:0] M_endRegC,
 	
+	output reg [31:0] dado_regC,
+	output reg [4:0] endRegC
+	
+);
 
+	always @(posedge clk)
+		case(fonte)
+			2'b00:
+			begin
+				dado_regC 	<= x_aluout;
+				endRegC		<= x_register_store_adress;
+			end
+			2'b01:
+			begin
+				dado_regC 	<= L0_load_aluout;
+				endRegC		<= L0_register_store_adress;
+			end
+			2'b10:
+			begin
+				dado_regC 	<= S0_store_value;
+				endRegC		<= S0_register_store_adress;
+			end
+			2'b11:
+			begin
+				dado_regC 	<= M_regC;
+				endRegC		<= endRegC;
+			end
+		endcase
 
+endmodule
 
 
