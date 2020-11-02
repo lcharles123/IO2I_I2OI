@@ -1,12 +1,12 @@
 /** CORE **/
 module pipemips 
 (
-	input clk, rst, stall, regwrite,
+	input clk, rst, stall, permitEscrita,
     input [4:0] muxRegDst,
   
   	//output [31:0] x_aluout, L1_load_aluout,
     //output [4:0]  x_register_store_adress,  L1_register_store_adress
-  output [31:0]  L0_load_aluout, output [4:0] L0_register_store_adress,
+  	output [31:0]  L0_load_aluout, output [4:0] L0_register_store_adress,
   
  	output [31:0]  mul3_res, output [4:0] mul3_endRegC
     
@@ -17,7 +17,7 @@ module pipemips
 	wire pc_src, stall, m_addres;
   
   	//Variaveis Decode
-  	wire regwrite;
+  	wire permitEscrita;
     wire [31:0] inst, pc, writedata;
  	wire [4:0] muxRegDst;
   
@@ -41,7 +41,6 @@ module pipemips
     wire[31:0] L0_load_aluout, L1_load_aluout;
   	wire[4:0]  L0_register_store_adress, L1_register_store_adress;
 
-
   	//Variaveis MUL
     wire[31:0] mul0_res ,	 mul1_res, 	   mul2_res ,	 mul3_res    ;
   	wire[4:0]  mul0_endRegC, mul1_endRegC, mul2_endRegC, mul3_endRegC;
@@ -53,7 +52,7 @@ module pipemips
   
   
   	
-  Decode decode (clk, rst, stall, regwrite, d_inst, d_pc, writedata, muxRegDst, 
+  Decode decode (clk, rst, stall, permitEscrita, d_inst, d_pc, writedata, muxRegDst, 
                  
                    i_rd1, i_rd2, i_sigext, i_pc, i_inst1, i_inst2, i_aluop, i_alusrc, i_regdst, 
 					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
@@ -229,7 +228,7 @@ endmodule
 module Decode 
 (
 	input clk, rst, stall, //ok aqui, mas nao funciona no IDI
-    input regwrite, 
+    input permitEscrita, //
   	input [31:0] inst, pc, writedata, 
     input [4:0] muxRegDst, 
   
@@ -243,7 +242,7 @@ module Decode
 	wire [4:0] rA, rB, rC; 
 	wire [5:0] opcode;
 	wire [1:0] aluop;
-	wire branch, memread, memtoreg, memwrite, regdst, alusrc, regwrite, regwrite_out;
+	wire branch, memread, memtoreg, memwrite, regdst, alusrc, permitEscrita, regwrite_out;
 	
 	
 	assign opcode = inst[31:26]; //opcode
@@ -258,7 +257,7 @@ module Decode
 					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
 
-	Register_Bank Registers (clk, regwrite, rA, rB, muxRegDst, writedata, 
+	Register_Bank Registers (clk, permitEscrita, rA, rB, muxRegDst, writedata, 
 			                   data1, data2);
  
 	
@@ -407,7 +406,7 @@ module Control
 endmodule 
 
 
-module Register_Bank (input clk, regwrite, input [4:0] read1, read2, writereg, input [31:0] writedata, output [31:0] data1, data2);
+module Register_Bank (input clk, permitEscrita, input [4:0] read1, read2, writereg, input [31:0] writedata, output [31:0] data1, data2);
 
   integer i;
   reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
@@ -418,11 +417,11 @@ module Register_Bank (input clk, regwrite, input [4:0] read1, read2, writereg, i
       memory[i] <= i;
   end
     
-  assign data1 = (regwrite && read1==writereg) ? writedata : memory[read1];
-  assign data2 = (regwrite && read2==writereg) ? writedata : memory[read2];
+  assign data1 = (permitEscrita && read1==writereg) ? writedata : memory[read1];
+  assign data2 = (permitEscrita && read2==writereg) ? writedata : memory[read2];
 	
   always @(posedge clk) begin
-    if (regwrite)
+    if (permitEscrita)
       memory[writereg] <= writedata;
   end
 endmodule
