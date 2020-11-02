@@ -100,8 +100,8 @@ SW
 
 
 r0 -> constante zero
-r1 -> stack pointer
-r2 -> registradores livres
+r1 -> registradores livres
+r2
 r3
 r4
 r5
