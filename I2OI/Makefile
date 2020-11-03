@@ -9,13 +9,18 @@ WAV=gtkwave
 
 principal: help
 
-core: I2OI.v tb/core_tb.v
+fsb: dut/FSB.v
 	$(COM) -Wall $^ -o $@.vvp
 	$(SIM) $@.vvp
 
-io2i: I2OI.v 
+rob: dut/ROB.v
 	$(COM) -Wall $^ -o $@.vvp
 	$(SIM) $@.vvp
+
+sb: dut/SB.v
+	$(COM) -Wall $^ -o $@.vvp
+	$(SIM) $@.vvp
+
 
 
 #wave: run
@@ -26,7 +31,7 @@ clean:
 	rm -rf *.vcd
 
 help:
-	@echo "\tmake [target]\n\n\tlista de targets:\n\tcore \n\tclean\n" 
+	@echo "\tmake [target]\n\n\tlista de targets:\n\tfsb\n\tcore\n\tsb\n\trob \n\tclean\n" 
 
 
 
