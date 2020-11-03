@@ -1,8 +1,10 @@
 /** CORE **/
 module pipemips 
 (
-	input clk, rst, stall, permitEscrita,
-    input [4:0] w_regC,
+	input clk, rst, stall,
+	
+	//resultado das operacoes que escrevem no reg: todas menos branch e alu
+
   
   	output [31:0] x_aluout, 
     output [4:0]  x_register_store_adress,  
@@ -13,17 +15,18 @@ module pipemips
   
  //	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
  	
- 	output [31:0] dado_regC,
-	output [4:0] endRegC
+ 	output [31:0] dado_regC,	
+    output [4:0] w_regC,
+ 	output permitEscrita,
 );  
   	wire stall;
   	//Variaveis Fetch
-  wire [31:0] d_inst, d_pc, m_addres;	
+  	wire [31:0] d_inst, d_pc, m_addres;	
 	wire pc_src;
   
   	//Variaveis Decode
   	wire permitEscrita;
-    wire [31:0] inst, pc, writedata; //dado para escrita no reg[w_regC]
+    wire [31:0] inst, pc; //dado para escrita no reg[w_regC]
  	wire [4:0] w_regC;//endereco para escrita nos registradores, regC de inst tipo R e destino do load
   
     //Variaveis Entrada Issue
@@ -42,7 +45,7 @@ module pipemips
   	//Variaveis X
     wire [31:0] x_aluout;
   	wire [4:0]  x_register_store_adress;
-  	wire x_pipe_ativo;
+  	wire x_pipe_ativo, w_regwrite;
  
   	//Variaveis L
     wire[31:0] L0_load_aluout, L1_load_aluout;
@@ -61,7 +64,8 @@ module pipemips
   	
   	//variaveis writeback
 	wire [31:0] dado_regC;
-	wire [4:0] endRegC;
+	//wire [4:0] endRegC; == w_regC
+	wire permitEscrita;
 
 	Fetch fetch (clk, rst, stall,  pc_src, m_addres, // input do fetch
             
@@ -69,7 +73,7 @@ module pipemips
   
   
   	
-  Decode decode (clk, rst, stall, permitEscrita, d_inst, d_pc, writedata, w_regC, //saida das unidades funcionais serao ligadas em writedata e w_regC
+  Decode decode (clk, rst, stall, permitEscrita, d_inst, d_pc, dado_regC, w_regC, //saida das unidades funcionais serao ligadas em writedata e w_regC
                  
                    i_rd1, i_rd2, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, i_aluop, i_alusrc, i_regdst, 
 					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
@@ -80,9 +84,9 @@ module pipemips
                e_rd1, e_rd2, e_sigext, e_pc, e_inst1, e_inst2, e_inst3, e_aluop,  
                e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_select_execute);
 					
-  X0 x0 (clk, rst, e_alusrc, e_regdst, e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
+  X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
 
-        	x_aluout, x_register_store_adress, x_pipe_ativo);
+        	x_aluout, x_register_store_adress, w_regwrite, x_pipe_ativo);
 					
   L0 l0 (clk, rst, e_inst2, e_rd1, e_sigext, e_select_execute,
 
@@ -107,8 +111,9 @@ module pipemips
   M3 m3(clk, rst, mul2_res, mul2_endRegC, mul2_pipe_ativo,
   			mul3_res, mul3_endRegC, mul3_pipe_ativo);
 
-  WB wb(clk, rst, 2'b00, x_aluout, x_register_store_adress, x_pipe_ativo, L1_load_aluout, L1_register_store_adress, L1_pipe_ativo, S0_store_value, S0_register_store_adress, S0_pipe_ativo, mul3_res, mul3_endRegC, mul3_pipe_ativo, 
-	dado_regC,	endRegC);
+  WB wb(clk, rst, 2'b00, x_aluout, x_register_store_adress, x_pipe_ativo, w_regwrite , L1_load_aluout, L1_register_store_adress, L1_pipe_ativo, S0_store_value, S0_register_store_adress, S0_pipe_ativo, mul3_res, mul3_endRegC, mul3_pipe_ativo, 
+	
+	dado_regC,	w_regC, permitEscrita); //permitEscrita == 0 caso store e branch
 
   										  
 			
@@ -191,25 +196,23 @@ module Fetch // se stall == 1, insere nop
 		inst_mem[0] <= 32'b000000_00000_00000_00000_00000000000;// nop 	op	dest resposta
 		inst_mem[1] <= 32'b000101_00000_01010_0000000000000101; // addi 0+5 r10  res=5
 		inst_mem[2] <= 32'b000101_00000_01011_0000000000000111; // addi 0+7 r11  res=7
-		inst_mem[3] <= 32'b000101_00000_01100_0000000000000010; // addi 2+0 r12  res=2
+		inst_mem[3] <= 32'b000101_00000_01100_0000000000000010; // addi 0+2 r12  res=2
 		inst_mem[4] <= 32'b000101_00000_01101_0000000000000000; // addi 0+0 r13  res=0
-		inst_mem[5] <= 32'b000001_01010_01011_01010_00000_000001;// add 5+7 r10  res=12
-        inst_mem[6] <= 32'b000001_01011_01100_01011_00000_000001;// add 7+2 r11  res=9
-        inst_mem[7] <= 32'b000001_01100_01100_01100_00000_000001;// add 2+2 r12  res=4
-		inst_mem[8] <= 32'b000001_01011_01100_01100_00000000010; // sub 9-4 r12  res=5
-		inst_mem[9] <= 32'b000110_01010_01010_0000000000000010;// subi 12-2 r10  res=10
-        inst_mem[10] <= 32'b000001_01010_01011_01101_00000000100; //and 5&7 r11  res=1 //v
-        inst_mem[11] <= 32'b000001_01010_01010_01110_00000001000; //mul 2*2 r14  res=4
-		inst_mem[12] <= 32'b000001_01010_01100_01111_00000010000; //slt 10<5 r15 res=1 //v
-		inst_mem[13] <= 32'b000111_01011_00011_0000000000001001; //andi 9e9  r3  res=1 //v
+		inst_mem[5] <= 32'b000001_01010_01011_01010_00000000001;// add 5+7 r10  res=12
+        inst_mem[6] <= 32'b000001_01011_01100_01011_00000000001;// add 7+2 r11  res=9
+        inst_mem[7] <= 32'b000001_01100_01100_01100_00000000001;// add 2+2 r12  res=4	ok ate aqui
+inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[9] <= 32'b000001_01011_01100_01100_00000000010; // sub 9-4 r12  res=5
+        inst_mem[10] <= 32'b000001_01010_01011_01101_00000000100; //and 12&7 r11  res=1 //v
+        inst_mem[11] <= 32'b000001_01010_01010_01110_00000001000; //mul 12*12 r14  res=144
+		inst_mem[12] <= 32'b000001_01100_01010_01111_00000010000; //slt 5<12 r15 res=1 //v
 		
-		inst_mem[14] <= 32'b110000_01110_01111_0000000000000001; // blt 4<1   nao tomado
-		inst_mem[15] <= 32'b010000_01100_01010_0000000000000000; // bge 5>=10 nao tomado
+		inst_mem[12] <= 32'b110000_01110_01111_0000000000000001; // blt 4<1   nao tomado
 		
-		inst_mem[16] <= 32'b001001_00000_10000_0000000000000010; // lw mem[2]=3  -> r16		
-		inst_mem[17] <= 32'b001000_00000_01100_0000000000000111; // sw r12=5 ->  mem[7]
-
-		inst_mem[18] <= 32'b100000_00000_00000_0000000000000001; // beq 0=0 inst_mem[1]? 
+		inst_mem[13] <= 32'b001001_00000_10000_0000000000000010; // lw mem[2]=3  -> r16		
+		inst_mem[14] <= 32'b001000_00000_01100_0000000000000111; // sw r12=5 ->  mem[7]
+		
+		inst_mem[15] <= 32'b010000_00000_00000_0000000000000001; // beq 0=0 inst_mem[1]? 
 		
 
 		
@@ -383,29 +386,40 @@ module Control
 	begin
 		case(opcode) 
 			6'b000001: 
-			begin // R type
-				regdst <= 1 ;
-				alusrc <= 0 ;
+			begin // Tipo R
+				regdst <= 1 ;//reg de destino, apenas tipo r usa regC
+				alusrc <= 0 ; //se tem imediato, alusrc = 1 , uso no X0
+				memtoreg <= 0 ; //caso load
+				regwrite_out <= 1 ; //indica inst que escreve no reg; todas exceto branch, store, nop
+				memread <= 0 ; //le da memoria, apenas load
+				memwrite <= 0 ;//escreve mem, apenas store
+				branch <= 0 ; //indica se eh desvio, apenas branch
+				aluop <= 2'b10 ; //indica tipo R
+			end
+			6'b010000: 
+			begin // Branch BEQ
+				regdst <= 0 ; 
+				alusrc <= 1 ;
 				memtoreg <= 0 ;
-				regwrite_out <= 1 ;
+				regwrite_out <= 0 ;
 				memread <= 0 ;
 				memwrite <= 0 ;
-				branch <= 0 ;
-				aluop <= 2'b10 ;
+				branch <= 1 ; //esses
+				aluop <= 2'b00 ;// dois dizem se BEQ ou BLT , apenas 00 ou 01 ; 10 para tipo R e 11 para timpo IMM
 			end
-			6'b100000: 
-			begin // beq
+			6'b110000: 
+			begin // Branch BLT
 				regdst <= 0 ;
-				alusrc <= 0 ;
+				alusrc <= 1 ;
 				memtoreg <= 0 ;
 				regwrite_out <= 0 ;
 				memread <= 0 ;
 				memwrite <= 0 ;
 				branch <= 1 ;
-				aluop <= 1 ;
+				aluop <= 2'b01 ;
 			end
 			6'b000101: 
-			begin // addi
+			begin // IMM
 				regdst <= 0 ;
 				alusrc <= 1 ;
 				memtoreg <= 0 ;
@@ -413,7 +427,7 @@ module Control
 				memread <= 0 ;
 				memwrite <= 0 ;
 				branch <= 0 ;
-				aluop <= 0 ;
+				aluop <= 2'b11 ;
 			end
 			6'b001001: 
 			begin // lw
@@ -424,7 +438,7 @@ module Control
 				memread <= 1 ;
 				memwrite <= 0 ;
 				branch <= 0 ;
-				aluop <= 0 ;
+				aluop <= 2'b11 ;
 			end
 			6'b001000: 
 			begin // sw
@@ -435,7 +449,7 @@ module Control
 				memread <= 0 ;
 				memwrite <= 1 ;
 				branch <= 0 ;
-				aluop <= 0 ;
+				aluop <= 2'b11 ;
 			end
 			default: 
 			begin //nop
@@ -446,7 +460,7 @@ module Control
 				memread <= 0 ;
 				memwrite <= 0 ;
 				branch <= 0 ;
-				aluop <= 0 ;
+				aluop <= 2'b00 ;
 			end
 		endcase
 	end
@@ -594,7 +608,7 @@ endmodule
 
 module X0 
   (
-    input clk, rst, e_alusrc, e_regdst,
+    input clk, rst, e_alusrc, e_regdst, e_regwrite,
 	input [31:0] e_in1, e_in2, e_sigext, e_pc, 
     input [4:0] e_inst2, e_rC, 
     input [1:0] e_aluop, 
@@ -602,13 +616,14 @@ module X0
     
     output [31:0] x_aluout,
     output [4:0]  x_register_store_adress,
-    output x_pipe_ativo
+    output w_regwrite, x_pipe_ativo
   );
    
   wire [31:0] alu_B, e_addres, e_aluout, x_aluout;
   wire [3:0] aluctrl;
   wire e_zero, pipe_ativo;
   wire [4:0] endDest;
+  wire [5:0] functImm;
   
    always @*
      begin
@@ -621,28 +636,30 @@ module X0
   Add Add (e_pc, e_sigext, //soma o PC com o offset
                    e_addres);
 
-  assign alu_B = (e_alusrc) ? e_sigext : e_in2 ;
+  assign alu_B = (e_alusrc) ? e_sigext : e_in2 ; //se opera com imm, entao aluSrcB == sigext
   assign endDest = (e_regdst) ? e_rC : e_inst2; //seleciona reg escrita
+  assign functImm = (!e_alusrc) ? e_sigext[5:0] : 6'b000001 ; //caso tipo IMM, atribui um valor de funct
+  
+  
+  Alucontrol alucontrol (e_aluop, functImm, //atribuir funct aqui caso nao seja tipo R
+                         	aluctrl);
+  
   //Unidade Lógico Aritimética
   ALU alu (aluctrl, e_in1, alu_B, 
            e_aluout, e_zero);
 
-
-  Alucontrol alucontrol (e_aluop, e_sigext[5:0], 
-                         aluctrl);
-
-  X0W x0w(clk, rst, pipe_ativo, e_aluout, endDest, 
-          x_aluout, x_register_store_adress, x_pipe_ativo);
+  X0W x0w(clk, rst, pipe_ativo, e_regwrite, e_aluout, endDest, 
+          x_aluout, x_register_store_adress, x_pipe_ativo, w_regwrite);
   
 endmodule
 
 module X0W (
-    input clk, rst, pipe_ativo,
+    input clk, rst, pipe_ativo, x_regwrite,
   	input [31:0] e_aluout, 
   	input [4:0] endDest,
 	output [31:0] x_aluout, 
   	output [4:0] x_register_store_adress,
-  	output x_pipe_ativo
+  	output x_pipe_ativo, w_regwrite
 );
   always @(posedge clk) 
 	begin
@@ -650,13 +667,15 @@ module X0W (
 		  begin
          	x_aluout    			<= 0;
         	x_register_store_adress <= 0;
-            x_pipe_ativo <=0;
+            x_pipe_ativo 			<= 0;
+            w_regwrite				<= 0;
 		end
 		else 
           begin
 			x_aluout 				<= e_aluout;
           	x_register_store_adress <= endDest;
             x_pipe_ativo            <= pipe_ativo;
+            w_regwrite				<= x_regwrite;
         end
     end
 endmodule
@@ -683,7 +702,7 @@ module ALU
 	reg [31:0] aluout;
 
 	// Zero recebe um valor lógico caso aluout seja igual a zero.
-	assign zero = (aluout == 0); 
+	assign zero = (aluout == 0); // v para Branch tomado
 
 	always @(alucontrol, A, B) 
 	begin
@@ -692,7 +711,11 @@ module ALU
 			4'b0000 : aluout <= A + B; // add
 			4'b0001: aluout <= A - B; // sub
 			4'b0011: aluout <= A & B; // and
-			4'b1111: aluout <= A < B ? 32'd1 : 32'd0 ; //SLT
+			4'b1111: aluout <= A < B ? 32'd1 : 32'd0 ; //SLT,
+			
+			4'b1000: aluout <= A < B ? 32'd0 : 32'd1 ; //BLT
+			4'b1100: aluout <= A == B ? 32'd0 : 32'd1 ; //BEQ
+			
 			default: aluout <= 0; //default 0, Nada acontece;
 		endcase
 	end
@@ -710,9 +733,9 @@ module Alucontrol
 
   always @(aluop, funct) 
 	begin
-		case (aluop)
-			2'b00: alucontrol <= 4'b0010; // ADD para sw e lw
-			2'b01: alucontrol <= 4'b0110; // SUB para branch
+		case (aluop) //00 BEQ; 01 BLT
+			2'b00: alucontrol <= 4'b1000; // Branch BEQ
+			2'b01: alucontrol <= 4'b1100; // BLT
 			default:
 			begin
 				case (funct) //case: funct do tipo r, atribui alucontrol
@@ -743,10 +766,10 @@ module L0 (
   
   always @*
      begin
-       if ( e_select_execute == 3'b010)
-          pipe_ativo <= 1;
-      else
+       if (!rst)
           pipe_ativo <= 0;
+      else if (e_select_execute == 3'b010)
+          pipe_ativo <= 1;
      end
 
   
@@ -1097,7 +1120,7 @@ module WB(
 	//X0
 	input [31:0] x_aluout, 
 	input [4:0]  x_register_store_adress,
-  	input x_pipe_ativo,
+  	input x_pipe_ativo, x_regwrite,
 	//Load
 	input [31:0] L0_load_aluout,
   	input [4:0] L0_register_store_adress,
@@ -1112,31 +1135,36 @@ module WB(
   	input M_pipe_ativo,
 	
 	output reg [31:0] dado_regC,
-	output reg [4:0] endRegC
+	output reg [4:0] endRegC,
+	output reg permitEscrita
 	
 );
 
 	always @(posedge clk)
-		case(fonte)
+		case(fonte)//cada um dos 4 pipelines
 			2'b00:
 			begin
-				dado_regC 	<= x_aluout;
-				endRegC		<= x_register_store_adress;
+				dado_regC 		<= x_aluout;
+				endRegC			<= x_register_store_adress;
+				permitEscrita	<= x_regwrite;
 			end
 			2'b01:
 			begin
 				dado_regC 	<= L0_load_aluout;
 				endRegC		<= L0_register_store_adress;
+				permitEscrita	<= 1;				
 			end
 			2'b10:
 			begin
 				dado_regC 	<= S0_store_value;
 				endRegC		<= S0_register_store_adress;
+				permitEscrita	<= 0;				
 			end
 			2'b11:
 			begin
 				dado_regC 	<= M_regC;
 				endRegC		<= endRegC;
+				permitEscrita	<= 1;				
 			end
 		endcase
 
