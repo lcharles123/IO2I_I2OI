@@ -6,12 +6,12 @@ module pipemips
   
   	output [31:0] x_aluout, 
     output [4:0]  x_register_store_adress,  
-    output [4:0]  L0_register_store_adress, L1_register_store_adress,
-    output [4:0]  S0_register_store_adress,
-  	output [31:0]  L0_load_aluout, L1_load_aluout,
-    output [31:0]  S0_store_value,
+   // output [4:0]  L0_register_store_adress, L1_register_store_adress,
+   // output [4:0]  S0_register_store_adress,
+  	//output [31:0]  L0_load_aluout, L1_load_aluout,
+  //  output [31:0]  S0_store_value,
   
- 	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
+ //	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
  	
  	output [31:0] dado_regC,
 	output [4:0] endRegC
@@ -391,7 +391,7 @@ module Control
 				memread <= 0 ;
 				memwrite <= 0 ;
 				branch <= 0 ;
-				aluop <= 2 ;
+				aluop <= 2'b10 ;
 			end
 			6'b100000: 
 			begin // beq
@@ -404,7 +404,7 @@ module Control
 				branch <= 1 ;
 				aluop <= 1 ;
 			end
-			6'b0001xx: 
+			6'b000101: 
 			begin // addi
 				regdst <= 0 ;
 				alusrc <= 1 ;
@@ -608,7 +608,7 @@ module X0
   wire [31:0] alu_B, e_addres, e_aluout, x_aluout;
   wire [3:0] aluctrl;
   wire e_zero, pipe_ativo;
-  wire [4:0] endRes;
+  wire [4:0] endDest;
   
    always @*
      begin
@@ -626,6 +626,7 @@ module X0
   //Unidade Lógico Aritimética
   ALU alu (aluctrl, e_in1, alu_B, 
            e_aluout, e_zero);
+
 
   Alucontrol alucontrol (e_aluop, e_sigext[5:0], 
                          aluctrl);
@@ -688,12 +689,10 @@ module ALU
 	begin
 	//verifica qual o valor do controle para determinar o que fazer com a saída
 		case (alucontrol)
-			0: aluout <= A & B; // AND
-			1: aluout <= A | B; // OR
-			2: aluout <= A + B; // ADD
-			6: aluout <= A - B; // SUB
-			7: aluout <= A < B ? 32'd1:32'd0; //SLT
-			12: aluout <= ~(A | B); // NOR
+			4'b0000 : aluout <= A + B; // add
+			4'b0001: aluout <= A - B; // sub
+			4'b0011: aluout <= A & B; // and
+			4'b1111: aluout <= A < B ? 32'd1 : 32'd0 ; //SLT
 			default: aluout <= 0; //default 0, Nada acontece;
 		endcase
 	end
@@ -716,13 +715,12 @@ module Alucontrol
 			2'b01: alucontrol <= 4'b0110; // SUB para branch
 			default:
 			begin
-				case (funct)
-					1: alucontrol <= 4'b0010; // ADD
-					2: alucontrol <= 4'b0110; // SUB
-					4: alucontrol <= 4'b0000; // AND
-					8: alucontrol <= 4'b0001; // OR
-					//39: alucontrol <= 4'd12; // NOR ?
-					//42: alucontrol <= 4'b0111; // SLT
+				case (funct) //case: funct do tipo r, atribui alucontrol
+					1:  alucontrol <= 4'b0000; // ADD
+					2:  alucontrol <= 4'b0001; // SUB
+					4:  alucontrol <= 4'b0011; // AND
+					//8:  alucontrol <= 4'b0111; // MUL
+					16: alucontrol <= 4'b1111; // SLT
 					default: alucontrol <= 4'd15; // Nada acontece ?
 				endcase
 			end
