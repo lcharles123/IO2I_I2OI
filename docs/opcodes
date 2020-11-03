@@ -7,9 +7,9 @@ NOP
 
 Tipo R
 31:26	25:21	20:16	15:11	10:0
-DESCRICAO: rD = rA OPER rB
+DESCRICAO: rC = rA OPER rB
 
-opcode	rA		rB		rD		funct
+opcode	rA		rB		rC		funct
 ADD
 000001	00001	00001	00001	00000000001
 SUB
