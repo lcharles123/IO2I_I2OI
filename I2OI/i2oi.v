@@ -17,12 +17,11 @@ module pipemips
  	
  	output [31:0] dado_regC, w_novoPC,	
     output [4:0] w_regC,
- 	output permitEscrita, pc_src , w_branchTomado//testar branch
+ 	output permitEscrita , w_branchTomado//testar branch
 );  
   	wire stall;
   	//Variaveis Fetch
   	wire [31:0] d_inst, d_pc, w_novoPC;	
-	wire pc_src;
   
   	//Variaveis Decode
   	wire permitEscrita;
@@ -199,9 +198,12 @@ module Fetch // se stall == 1, insere nop
 		inst_mem[3] <= 32'b000101_00000_01100_0000000000000010; // addi 0+2 r12  res=2
 		inst_mem[4] <= 32'b000101_00000_01101_0000000000000000; // addi 0+0 r13  res=0
 		        		
-		        		inst_mem[5] <= 32'b010000_00000_00000_1000000000000101; // beq 0=0 inst_mem[1]? inst 6, pc == 24
+		        		inst_mem[5] <= 32'b010000_00000_00000_1000000000000110; // beq 0=0 inst_mem[1]? inst 6, pc == 24
 	inst_mem[6] <= 32'b00000000000000000000000000000000; // nop
 	inst_mem[7] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
+			inst_mem[9] <= 32'b00000000000000000000000000000000; // nop
+				inst_mem[10] <= 32'b00000000000000000000000000000000; // nop
 		
 		/*
 		inst_mem[5] <= 32'b000001_01010_01011_01010_00000000001;// add 5+7 r10  res=12 [16 no 10] ?
@@ -699,17 +701,20 @@ module Add //add para o pc
 (
 	input [31:0] pc, shiftleft2, 
 	
-	output [31:0] add_result
+	output [31:0] add_result_out
 );
+	wire [31:0] add_result;
 	
+	assign add_result_out = {17'b0, add_result[14:0]};
+
 	always @(*)
 		if(shiftleft2[15] == 0) //se eh negativo
 		begin
-			add_result <= pc + (shiftleft2 << 2);
+			add_result[14:0] <= pc + (shiftleft2[14:0] << 2);
 		end
 		else
 		begin
-			add_result <= pc - (shiftleft2 << 2);
+			add_result[14:0] <= pc[14:0] - (shiftleft2[14:0] << 2);
 		end
 endmodule
 
