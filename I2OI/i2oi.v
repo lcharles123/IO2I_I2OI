@@ -1254,8 +1254,7 @@ module WB(
 	
 	output reg [31:0] dado_regC,
 	output reg [4:0] endRegC,
-	output reg permitEscrita, //eh_store
-	
+	output reg permitEscrita//,eh_store	
 );
 
 	always @(posedge clk)
@@ -1291,6 +1290,7 @@ module WB(
 		endcase
 
 endmodule
+
 
 
 

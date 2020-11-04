@@ -1254,7 +1254,7 @@ module WB(
 	
 	output reg [31:0] dado_regC,
 	output reg [4:0] endRegC,
-	output reg permitEscrita, eh_store
+	output reg permitEscrita, //eh_store
 	
 );
 
@@ -1265,32 +1265,33 @@ module WB(
 				dado_regC 		<= x_aluout;
 				endRegC			<= x_register_store_adress;
 				permitEscrita	<= x_regwrite;
-				eh_store		<= 0;					
+				//eh_store		<= 0;					
 			end
 			2'b01:
 			begin
 				dado_regC 		<= L0_load_aluout;
 				endRegC			<= L0_register_store_adress;
 				permitEscrita	<= 1;				
-				eh_store		<= 0;					
+				//eh_store		<= 0;					
 			end
 			2'b10:
 			begin
 				dado_regC 		<= S0_store_value;
 				endRegC			<= S0_register_store_adress;
 				permitEscrita	<= 0;	
-				eh_store		<= 1;		
+				//eh_store		<= 1;		
 			end
 			2'b11:
 			begin
 				dado_regC 		<= M_regC;
 				endRegC			<= endRegC;
 				permitEscrita	<= 1;
-				eh_store		<= 0;					
+				//eh_store		<= 0;					
 			end
 		endcase
 
 endmodule
+
 
 
 

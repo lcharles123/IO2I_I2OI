@@ -348,7 +348,7 @@ module Decode
 			                   data1, data2);
  
 	
-	//Reorder_Buffer();
+//ISSUE QUEUE VAI AQUI
 
 	// IDI
   IDI idi (clk, rst,stall, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, d_sigext, rA, rB, rC,

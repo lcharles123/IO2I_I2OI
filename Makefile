@@ -21,6 +21,10 @@ sb: dut/SB.v
 	$(COM) -Wall $^ -o $@.vvp
 	$(SIM) $@.vvp
 
+sb: dut/IQ.v
+	$(COM) -Wall $^ -o $@.vvp
+	$(SIM) $@.vvp
+
 
 
 #wave: run
@@ -31,7 +35,7 @@ clean:
 	rm -rf *.vcd
 
 help:
-	@echo "\tmake [target]\n\n\tlista de targets:\n\tfsb\n\tcore\n\tsb\n\trob \n\tclean\n" 
+	@echo "\tmake [target]\n\n\tlista de targets:\n\tfsb\n\tcore\n\tsb\n\trob\n\tiq \n\tclean\n" 
 
 
 
