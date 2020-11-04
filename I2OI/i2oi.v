@@ -14,10 +14,10 @@ module pipemips
   //  output [31:0]  S0_store_value,
   
  //	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
- 	
+ 	//testar branch
  	output [31:0] dado_regC, w_novoPC,	
     output [4:0] w_regC,
- 	output permitEscrita , w_branchTomado//testar branch
+ 	output permitEscrita , w_branchTomado,eh_store
 );  
   	wire stall;
   	//Variaveis Fetch
@@ -112,7 +112,7 @@ module pipemips
 
   WB wb(clk, rst, e_select_execute, x_aluout, x_register_store_adress, x_pipe_ativo, w_regwrite , L1_load_aluout, L1_register_store_adress, L1_pipe_ativo, S0_store_value, S0_register_store_adress, S0_pipe_ativo, mul3_res, mul3_endRegC, mul3_pipe_ativo, 
 	
-	dado_regC,	w_regC, permitEscrita); //permitEscrita == 0 caso store e branch
+	dado_regC,	w_regC, permitEscrita, eh_store); //permitEscrita == 0 caso store e branch
 
   										  
 			
@@ -1254,7 +1254,8 @@ module WB(
 	
 	output reg [31:0] dado_regC,
 	output reg [4:0] endRegC,
-	output reg permitEscrita//,eh_store	
+	output reg permitEscrita, eh_store
+	
 );
 
 	always @(posedge clk)
@@ -1264,28 +1265,28 @@ module WB(
 				dado_regC 		<= x_aluout;
 				endRegC			<= x_register_store_adress;
 				permitEscrita	<= x_regwrite;
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 			2'b01:
 			begin
 				dado_regC 		<= L0_load_aluout;
 				endRegC			<= L0_register_store_adress;
 				permitEscrita	<= 1;				
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 			2'b10:
 			begin
 				dado_regC 		<= S0_store_value;
 				endRegC			<= S0_register_store_adress;
 				permitEscrita	<= 0;	
-				//eh_store		<= 1;		
+				eh_store		<= 1;		
 			end
 			2'b11:
 			begin
 				dado_regC 		<= M_regC;
 				endRegC			<= endRegC;
 				permitEscrita	<= 1;
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 		endcase
 
