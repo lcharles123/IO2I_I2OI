@@ -15,13 +15,13 @@ module pipemips
   
  //	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
  	
- 	output [31:0] dado_regC,	
+ 	output [31:0] dado_regC, w_novoPC,	
     output [4:0] w_regC,
- 	output permitEscrita,
+ 	output permitEscrita, pc_src , w_branchTomado//testar branch
 );  
   	wire stall;
   	//Variaveis Fetch
-  	wire [31:0] d_inst, d_pc, m_addres;	
+  	wire [31:0] d_inst, d_pc, w_novoPC;	
 	wire pc_src;
   
   	//Variaveis Decode
@@ -63,11 +63,11 @@ module pipemips
   	wire mul0_pipe_ativo, mul1_pipe_ativo, mul2_pipe_ativo, mul3_pipe_ativo;
   	
   	//variaveis writeback
-	wire [31:0] dado_regC;
+	wire [31:0] dado_regC, w_novoPC;
 	//wire [4:0] endRegC; == w_regC
 	wire permitEscrita;
 
-	Fetch fetch (clk, rst, stall,  pc_src, m_addres, // input do fetch
+	Fetch fetch (clk, rst, stall,  w_branchTomado, w_novoPC, // input do fetch
             
 					 d_inst, d_pc); //output do fetch
   
@@ -84,9 +84,9 @@ module pipemips
                e_rd1, e_rd2, e_sigext, e_pc, e_inst1, e_inst2, e_inst3, e_aluop,  
                e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_select_execute);
 					
-  X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
+  X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_branch , e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
 
-        	x_aluout, x_register_store_adress, w_regwrite, x_pipe_ativo);
+        	x_aluout, w_novoPC, x_register_store_adress, w_branchTomado, w_regwrite, x_pipe_ativo);
 					
   L0 l0 (clk, rst, e_inst2, e_rd1, e_sigext, e_select_execute,
 
@@ -133,8 +133,8 @@ module Fetch // se stall == 1, insere nop
 	wire [31:0] inst;
 
 	assign pc_4 = (stall) ? pc : pc + 4;
-	//assign new_pc = (pc_src) ? add_res : pc_4; //decide se pc vem do fluxo normal ou de endereco de branch
-	assign new_pc = pc_4;
+	assign new_pc = (pc_src) ? add_res : pc_4; //decide se pc vem do fluxo normal ou de endereco de branch
+	//assign new_pc = pc_4;
   
 	PC program_counter(new_pc, clk, rst, 
 						pc);
@@ -198,23 +198,33 @@ module Fetch // se stall == 1, insere nop
 		inst_mem[2] <= 32'b000101_00000_01011_0000000000000111; // addi 0+7 r11  res=7
 		inst_mem[3] <= 32'b000101_00000_01100_0000000000000010; // addi 0+2 r12  res=2
 		inst_mem[4] <= 32'b000101_00000_01101_0000000000000000; // addi 0+0 r13  res=0
-		inst_mem[5] <= 32'b000001_01010_01011_01010_00000000001;// add 5+7 r10  res=12
-        inst_mem[6] <= 32'b000001_01011_01100_01011_00000000001;// add 7+2 r11  res=9
-        inst_mem[7] <= 32'b000001_01100_01100_01100_00000000001;// add 2+2 r12  res=4	ok ate aqui
-inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
-		inst_mem[9] <= 32'b000001_01011_01100_01100_00000000010; // sub 9-4 r12  res=5
-        inst_mem[10] <= 32'b000001_01010_01011_01101_00000000100; //and 12&9 r11  res=8 //v
-        inst_mem[11] <= 32'b000001_01010_01010_01110_00000001000; //mul 12*12 r14  res=144
-		inst_mem[12] <= 32'b000001_01100_01010_01111_00000010000; //slt 5<12 r15 res=1 //v
+		        		
+		        		inst_mem[5] <= 32'b010000_00000_00000_1000000000000101; // beq 0=0 inst_mem[1]? inst 6, pc == 24
+	inst_mem[6] <= 32'b00000000000000000000000000000000; // nop
+	inst_mem[7] <= 32'b00000000000000000000000000000000; // nop
 		
-		inst_mem[12] <= 32'b110000_01110_01111_0000000000000001; // blt 4<1   nao tomado
-		
-		inst_mem[13] <= 32'b001001_00000_10000_0000000000000010; // lw mem[2]=3  -> r16		
-		inst_mem[14] <= 32'b001000_00000_01100_0000000000000111; // sw r12=5 ->  mem[7]
-		
-		inst_mem[15] <= 32'b010000_00000_00000_0000000000000001; // beq 0=0 inst_mem[1]? 
-		
+		/*
+		inst_mem[5] <= 32'b000001_01010_01011_01010_00000000001;// add 5+7 r10  res=12 [16 no 10] ?
+        inst_mem[6] <= 32'b000001_01011_01100_01011_00000000001;// add 7+12 r11  res=19 
+        inst_mem[7] <= 32'b000001_01100_01100_01100_00000000001;// add 2+2 r12  res=4
+		inst_mem[8] <= 32'b00000000000000000000000000000000; // nop
+		inst_mem[9] <= 32'b000001_01011_01100_01100_00000000010; // sub 9-4 r12  res=5	ok ate aqui
+        inst_mem[10] <= 32'b000001_01010_01011_01101_00000000100; //and 12&9 r13  res=8 //v  // [16 no 13]
+        inst_mem[11] <= 32'b000001_01010_01010_01110_00000001000; //mul 12*12 r14  res=144   //nada no 14, precisa dos nops ou funciona com scoreboard
+        
 
+        
+        /*
+		inst_mem[12] <= 32'b000001_01100_01010_01111_00000010000; //slt 5<12 r15 res=1 //v // ok ate aqui
+		
+		inst_mem[13] <= 32'b110000_01110_01111_0000000000000001; // blt 4<1   nao tomado //esta escrevendo no reg, arrumar isso
+		
+		inst_mem[14] <= 32'b001001_00000_10000_0000000000000010; // lw mem[2]=3  -> r16		
+		inst_mem[15] <= 32'b001000_00000_01100_0000000000000111; // sw r12=5 ->  mem[7]
+		
+		inst_mem[16] <= 32'b010000_00000_00000_0000000000000001; // beq 0=0 inst_mem[1]? 
+		
+*/
 		
 //testar mull
 	/*	inst_mem[0] <= 32'b00000000000000000000000000000000; // nop		r2=3 ; r3=4
@@ -399,7 +409,7 @@ module Control
 			6'b010000: 
 			begin // Branch BEQ
 				regdst <= 0 ; 
-				alusrc <= 1 ;
+				alusrc <= 0 ;//o branch consiste em comparar o conteudo de regA e regB se sao iguais, saltar para a posicao dada pelo imediato
 				memtoreg <= 0 ;
 				regwrite_out <= 0 ;
 				memread <= 0 ;
@@ -410,7 +420,7 @@ module Control
 			6'b110000: 
 			begin // Branch BLT
 				regdst <= 0 ;
-				alusrc <= 1 ;
+				alusrc <= 0 ;
 				memtoreg <= 0 ;
 				regwrite_out <= 0 ;
 				memread <= 0 ;
@@ -608,20 +618,20 @@ endmodule
 
 module X0 
   (
-    input clk, rst, e_alusrc, e_regdst, e_regwrite,
+    input clk, rst, e_alusrc, e_regdst, e_regwrite, i_branch, //se eh branch
 	input [31:0] e_in1, e_in2, e_sigext, e_pc, 
     input [4:0] e_inst2, e_rC, 
     input [1:0] e_aluop, 
     input [2:0] e_select_execute,
     
-    output [31:0] x_aluout,
+    output [31:0] x_aluout, w_novoPC,
     output [4:0]  x_register_store_adress,
-    output w_regwrite, x_pipe_ativo
+    output w_branchTomado, w_regwrite, x_pipe_ativo
   );
    
-  wire [31:0] alu_B, e_addres, e_aluout, x_aluout;
+  wire [31:0] alu_B, e_novoPC, e_aluout, x_aluout;
   wire [3:0] aluctrl;
-  wire e_zero, pipe_ativo;
+  wire e_zero, pipe_ativo, x_branchTomado;
   wire [4:0] endDest;
   wire [5:0] functImm;
   
@@ -633,13 +643,13 @@ module X0
           pipe_ativo <= 0;
      end
   
-  Add Add (e_pc, e_sigext, //soma o PC com o offset
-                   e_addres);
+  Add Add (e_pc, e_sigext, //soma ou subtrai o PC com o offset
+                   e_novoPC);
 
   assign alu_B = (e_alusrc) ? e_sigext : e_in2 ; //se opera com imm, entao aluSrcB == sigext
   assign endDest = (e_regdst) ? e_rC : e_inst2; //seleciona reg escrita
-  assign functImm = (!e_alusrc) ? e_sigext[5:0] : 6'b000001 ; //caso tipo IMM, atribui um valor de funct
-  
+  assign functImm = (!e_alusrc) ? e_sigext[5:0] : 6'b000001 ; //caso tipo IMM, atribui um valor de funct, nesse caso addi
+  assign x_branchTomado = (e_zero && i_branch) ? 1 : 0 ; //sim caso seja branch e alu == zero
   
   Alucontrol alucontrol (e_aluop, functImm, //atribuir funct aqui caso nao seja tipo R
                          	aluctrl);
@@ -648,18 +658,19 @@ module X0
   ALU alu (aluctrl, e_in1, alu_B, 
            e_aluout, e_zero);
 
-  X0W x0w(clk, rst, pipe_ativo, e_regwrite, e_aluout, endDest, 
-          x_aluout, x_register_store_adress, x_pipe_ativo, w_regwrite);
+  X0W x0w(clk, rst, pipe_ativo, e_regwrite, x_branchTomado, e_aluout, e_novoPC, endDest, 
+          x_aluout, w_novoPC, x_register_store_adress, x_pipe_ativo, w_regwrite, w_branchTomado);
   
 endmodule
 
 module X0W (
-    input clk, rst, pipe_ativo, x_regwrite,
-  	input [31:0] e_aluout, 
+    input clk, rst, pipe_ativo, x_regwrite, x_branchTomado,
+  	input [31:0] e_aluout,x_novoPC ,
   	input [4:0] endDest,
-	output [31:0] x_aluout, 
+  	
+	output [31:0] x_aluout,w_novoPC ,
   	output [4:0] x_register_store_adress,
-  	output x_pipe_ativo, w_regwrite
+  	output x_pipe_ativo, w_regwrite, w_branchTomado
 );
   always @(posedge clk) 
 	begin
@@ -669,6 +680,8 @@ module X0W (
         	x_register_store_adress <= 0;
             x_pipe_ativo 			<= 0;
             w_regwrite				<= 0;
+            w_novoPC				<= 0;
+            w_branchTomado			<= 0;
 		end
 		else 
           begin
@@ -676,6 +689,8 @@ module X0W (
           	x_register_store_adress <= endDest;
             x_pipe_ativo            <= pipe_ativo;
             w_regwrite				<= x_regwrite;
+            w_novoPC				<= x_novoPC;
+            w_branchTomado			<= x_branchTomado;
         end
     end
 endmodule
@@ -686,7 +701,16 @@ module Add //add para o pc
 	
 	output [31:0] add_result
 );
-	assign add_result = pc + (shiftleft2 << 2);
+	
+	always @(*)
+		if(shiftleft2[15] == 0) //se eh negativo
+		begin
+			add_result <= pc + (shiftleft2 << 2);
+		end
+		else
+		begin
+			add_result <= pc - (shiftleft2 << 2);
+		end
 endmodule
 
 
@@ -734,8 +758,8 @@ module Alucontrol
   always @(aluop, funct) 
 	begin
 		case (aluop) //00 BEQ; 01 BLT
-			2'b00: alucontrol <= 4'b1000; // Branch BEQ
-			2'b01: alucontrol <= 4'b1100; // BLT
+			2'b00: alucontrol <= 4'b1100; // Branch BEQ
+			2'b01: alucontrol <= 4'b1000; // BLT
 			default:
 			begin
 				case (funct) //case: funct do tipo r, atribui alucontrol
@@ -821,7 +845,7 @@ module L1 (
                  data_out);
   
   L1W l1w(clk, rst, L0_pipe_ativo, L0_load_aluout, L0_register_store_adress,
-          data_out, L1_register_store_adress, L1_pipe_ativo);
+          L1_load_aluout, L1_register_store_adress, L1_pipe_ativo);
 endmodule
            
 module L1W (
