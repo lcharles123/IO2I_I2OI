@@ -1,23 +1,30 @@
 /** CORE **/
 module pipemips 
 (
-	input clk, rst,
+	input clk, rst,permitEscrita,
 	
 	//resultado das operacoes que escrevem no reg: todas menos branch e alu
 
   
-  	output [31:0] x_aluout, 
-    output [4:0]  x_register_store_adress,  
+  	//output [31:0] x_aluout, 
+   // output [4:0]  x_register_store_adress,  
    // output [4:0]  L0_register_store_adress, L1_register_store_adress,
    // output [4:0]  S0_register_store_adress,
   	//output [31:0]  L0_load_aluout, L1_load_aluout,
   //  output [31:0]  S0_store_value,
   
  //	output [31:0]  mul3_res, output [4:0] mul3_endRegC,
- 	
- 	output [31:0] dado_regC, w_novoPC,	
-    output [4:0] w_regC,
- 	output permitEscrita , w_branchTomado//testar branch
+ 	//testar branch
+ 	//output [31:0] dado_regC, w_novoPC,	
+    input [4:0] endRegC,
+    input [31:0]dadoRegC,
+ 	//output permitEscrita , w_branchTomado,eh_store
+ 	output wire [31:0] e_rd1, e_rd2, e_sigext, e_pc,
+   output  wire [4:0] e_inst1, e_inst2, e_inst3,
+  	output wire [1:0] e_aluop,
+  	output wire [2:0] e_select_execute,
+    output wire e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch,
+  
 );  
   	wire stall;
   	//Variaveis Fetch
@@ -62,7 +69,7 @@ module pipemips
   	wire mul0_pipe_ativo, mul1_pipe_ativo, mul2_pipe_ativo, mul3_pipe_ativo;
   	
   	//variaveis writeback
-	wire [31:0] dado_regC, w_novoPC;
+	wire [31:0] w_dado_regC, w_novoPC;
 	//wire [4:0] endRegC; == w_regC
 	wire permitEscrita;
 
@@ -72,18 +79,19 @@ module pipemips
   
   
   	
-  Decode decode (clk, rst, stall, permitEscrita, d_inst, d_pc, dado_regC, w_regC, //saida das unidades funcionais serao ligadas em writedata e w_regC
+  Decode decode (clk, rst, stall, d_inst, d_pc, 
                  
-                   i_rd1, i_rd2, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, i_aluop, i_alusrc, i_regdst, 
+                   i_sigext, i_pc, i_inst1, i_inst2, i_inst3, i_aluop, i_alusrc, i_regdst, 
 					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
-  
-  Issue issue (clk, rst, i_rd1, i_rd2, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, i_aluop, i_alusrc, i_regdst, 
-				i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+  																//end reg dest //dado do write
+  Issue issue (clk, rst, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, endRegC, dadoRegC, i_aluop, i_alusrc, i_regdst, 
+				i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch, permitEscrita, //entrada do write
 																//colocar e inst3 na entrada das unidades funcionais, end regC
                e_rd1, e_rd2, e_sigext, e_pc, e_inst1, e_inst2, e_inst3, e_aluop,  
                e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_select_execute, stall);
-					
-  X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_branch , e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
+		
+			
+ /* X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_branch , e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
 
         	x_aluout, w_novoPC, x_register_store_adress, w_branchTomado, w_regwrite, x_pipe_ativo);
 					
@@ -112,9 +120,9 @@ module pipemips
 
   WB wb(clk, rst, e_select_execute, x_aluout, x_register_store_adress, x_pipe_ativo, w_regwrite , L1_load_aluout, L1_register_store_adress, L1_pipe_ativo, S0_store_value, S0_register_store_adress, S0_pipe_ativo, mul3_res, mul3_endRegC, mul3_pipe_ativo, 
 	
-	dado_regC,	w_regC, permitEscrita); //permitEscrita == 0 caso store e branch
+	w_dado_regC,	w_regC, permitEscrita, eh_store); //permitEscrita == 0 caso store e branch
 
-  										  
+  	*/									  
 			
 endmodule
 	  
@@ -315,17 +323,15 @@ endmodule
 module Decode 
 (
 	input clk, rst, stall, //ok aqui, mas nao funciona no IDI
-    input permitEscrita, //
-  	input [31:0] inst, pc, writedata, 
-    input [4:0] w_regC, //endereco para escrita nos registradores, regC de inst tipo R e destino do load
+  	input [31:0] inst, pc, 
   
-  	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, //saida para issue 
+  	output [31:0] e_sigext, e_pc, //saida para issue 
 	output [4:0] e_inst1, e_inst2, e_inst3, 
 	output [1:0] e_aluop, 
 	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
 );
   
-	wire [31:0] data1, data2, d_sigext; //extensor de sinal desse modulo
+	wire [31:0] d_sigext; //extensor de sinal desse modulo
 	wire [4:0] rA, rB, rC; 
 	wire [5:0] opcode;
 	wire [1:0] aluop;
@@ -343,16 +349,9 @@ module Decode
 					
 					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
-
-	Register_Bank Registers (clk, permitEscrita, rA, rB, w_regC, writedata, 
-			                   data1, data2);
- 
-	
-//ISSUE QUEUE VAI AQUI
-
 	// IDI
-  IDI idi (clk, rst,stall, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, data1, data2, d_sigext, rA, rB, rC,
-			 e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_rd1, e_rd2, e_sigext, e_inst1, e_inst2, e_inst3);
+  IDI idi (clk, rst,stall, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, d_sigext, rA, rB, rC,
+			 e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_sigext, e_inst1, e_inst2, e_inst3);
 
 
 endmodule
@@ -361,12 +360,12 @@ module IDI
 (
 	input clk, rst,stall, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
 	input [1:0] d_aluop, 
-	input [31:0] d_pc, d_rd1, d_rd2, d_sigext, 
+	input [31:0] d_pc, d_sigext, 
 	input [4:0] d_inst1, d_inst2, d_inst3,
 	
 	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
 	output reg [1:0] e_aluop, 
-	output reg [31:0] e_pc, e_rd1, e_rd2, e_sigext, 
+	output reg [31:0] e_pc, e_sigext, 
 	output reg [4:0] e_inst1, e_inst2, e_inst3
 );
 
@@ -383,8 +382,6 @@ module IDI
 			e_aluop    <= 0;
 			e_alusrc   <= 0;
 			e_pc       <= 0;
-			e_rd1      <= 0;
-			e_rd2      <= 0;
 			e_sigext   <= 0;
 			e_inst1    <= 0;
 			e_inst2    <= 0;
@@ -401,8 +398,6 @@ module IDI
 			e_aluop    <= d_aluop;
 			e_alusrc   <= d_alusrc;
 			e_pc       <= d_pc;
-			e_rd1      <= d_rd1;
-			e_rd2      <= d_rd2;
 			e_sigext   <= d_sigext;
 			e_inst1    <= d_inst1;
 			e_inst2    <= d_inst2;
@@ -507,7 +502,14 @@ module Control
 endmodule 
 
 
-module Register_Bank (input clk, permitEscrita, input [4:0] read1, read2, writereg, input [31:0] writedata, output [31:0] data1, data2);
+module Register_Bank (
+
+	input clk, permitEscrita, 
+	input [4:0] read1, read2, writereg, 
+	input [31:0] writedata, 
+	
+	output [31:0] data1, data2
+);
 
   integer i;
   reg [31:0] memory [0:31]; // 32 registers de 32 bits cada
@@ -531,25 +533,31 @@ endmodule
 module Issue 
   (
 	input clk, rst, 
-	input [31:0] i_rd1, i_rd2, i_sigext, i_pc,
-	input [4:0] i_inst1, i_inst2, i_inst3,
+	input [31:0] i_sigext, i_pc, //dado 1, 2 e sigext, pc, dado a ser escrito no banco de regs
+	input [4:0] i_inst1, i_inst2, i_inst3, endRegC, //endereco de regs
+	input [31:0] dadoRegC, //resultado das operacoes a ser escrito nos regs
 	input [1:0] i_aluop,
-	input  i_alusrc, i_regdst, i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch,
+	input  i_alusrc, i_regdst, i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch, permitEscrita,
 	
-	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, 
+	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, //dado 1, 2 e sigext
 	output [4:0] e_inst1, e_inst2, e_inst3,
     output [1:0] e_aluop, 
 	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch,
     output [2:0] e_select_execute,
     output stall
 );  
-
-  wire [2:0] select_execute;
-  SelectExPipe select_ex_pipe(clk, i_regwrite, i_branch, i_memread, i_memwrite, i_alusrc, i_sigext[4:0], 
-                   select_execute); 
+	wire [31:0] i_rd1, i_rd2;
+	
+	wire [2:0] select_execute;
+	SelectExPipe select_ex_pipe(clk, i_regwrite, i_branch, i_memread, i_memwrite, i_alusrc, i_sigext[4:0], 
+		               select_execute); 
     //scoreboard
 	Score_Board sb(clk, rst, select_execute,
                  stall);
+	
+	Register_Bank banco_de_regs (clk, permitEscrita, i_inst1, i_inst2, endRegC, dadoRegC,  //end A, B, C, dado para escrita
+			                   i_rd1, i_rd2);
+ 
 	
         
   IEX iex (clk, rst, stall,
@@ -706,7 +714,41 @@ module IEX
 	end
 endmodule
   
-
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+/*
 module X0 
   (
     input clk, rst, e_alusrc, e_regdst, e_regwrite, i_branch, //se eh branch
@@ -1254,7 +1296,7 @@ module WB(
 	
 	output reg [31:0] dado_regC,
 	output reg [4:0] endRegC,
-	output reg permitEscrita, //eh_store
+	output reg permitEscrita, eh_store
 	
 );
 
@@ -1265,34 +1307,35 @@ module WB(
 				dado_regC 		<= x_aluout;
 				endRegC			<= x_register_store_adress;
 				permitEscrita	<= x_regwrite;
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 			2'b01:
 			begin
 				dado_regC 		<= L0_load_aluout;
 				endRegC			<= L0_register_store_adress;
 				permitEscrita	<= 1;				
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 			2'b10:
 			begin
 				dado_regC 		<= S0_store_value;
 				endRegC			<= S0_register_store_adress;
 				permitEscrita	<= 0;	
-				//eh_store		<= 1;		
+				eh_store		<= 1;		
 			end
 			2'b11:
 			begin
 				dado_regC 		<= M_regC;
 				endRegC			<= endRegC;
 				permitEscrita	<= 1;
-				//eh_store		<= 0;					
+				eh_store		<= 0;					
 			end
 		endcase
 
 endmodule
 
 
+*/
 
 
 

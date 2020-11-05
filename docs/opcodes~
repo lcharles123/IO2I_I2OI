@@ -32,15 +32,12 @@ Desvio
 
 opcode	rA		rB		offset
 BEQ
-if(rA == rB) PC += offset*4
+if(rA OPER rB) PC += offset*4
 010000	00000	00000	0000000000000000
 if(rA == rB) PC -= offset*4
 010000	00000	00000	1000000000000000
 BLT
-if(rA < rB) PC += offset*4
 110000	00010	00000	0000000000000000
-if(rA < rB) PC -= offset*4
-110000	00010	00000	1000000000000000
 
 Memoria
 DESCRICAO: rB = MEM[offset + rA]
