@@ -1,0 +1,30 @@
+#compilador
+COM=iverilog
+
+#simulador
+SIM=vvp
+
+#visualizador de onda
+WAV=gtkwave
+
+principal: iq
+
+fsb: iq.v
+	$(COM) -Wall $^ -o $@.vvp
+	$(SIM) $@.vvp
+
+
+
+
+#wave: run
+#	$(WAV) dum.vcd
+
+clean:
+	rm -rf *.vvp
+	rm -rf *.vcd
+
+help:
+	@echo "\tmake [target]\n\n\tlista de targets:\n\tiq \n\tclean\n" 
+
+
+
