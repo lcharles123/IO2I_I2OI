@@ -47,7 +47,8 @@ module pipemips
   	wire [1:0] e_aluop;
   	wire [2:0] e_select_execute;
     wire e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch;
-  
+  	wire cheio;
+  	
   	//Variaveis X
     wire [31:0] x_aluout;
   	wire [4:0]  x_register_store_adress;
@@ -81,16 +82,23 @@ module pipemips
   	
   Decode decode (clk, rst, stall, d_inst, d_pc, 
                  
-                   i_sigext, i_pc, i_inst1, i_inst2, i_inst3, i_aluop, i_alusrc, i_regdst, 
-					i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch);
+                   i_sigext, i_pc, i_inst1, i_inst2, i_inst3, cheio);
   																//end reg dest //dado do write
-  Issue issue (clk, rst, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, endRegC, dadoRegC, i_aluop, i_alusrc, i_regdst, 
-				i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch, permitEscrita, //entrada do write
+  Issue issue (clk, rst, i_sigext, i_pc, i_inst1, i_inst2, i_inst3, endRegC, dadoRegC, i_branch, permitEscrita, //entrada do write
 																//colocar e inst3 na entrada das unidades funcionais, end regC
                e_rd1, e_rd2, e_sigext, e_pc, e_inst1, e_inst2, e_inst3, e_aluop,  
                e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch, e_select_execute, stall);
 		
-			
+	module Issue 
+  (
+
+	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, //dado 1, 2 e sigext
+	output [4:0] e_inst1, e_inst2, e_inst3,
+    output [1:0] e_aluop, 
+	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch,
+    output [2:0] e_select_execute,
+    output stall
+);  
  /* X0 x0 (clk, rst, e_alusrc, e_regdst, e_regwrite, e_branch , e_rd1, e_rd2, e_sigext, e_pc, e_inst2, e_inst3, e_aluop, e_select_execute,
 
         	x_aluout, w_novoPC, x_register_store_adress, w_branchTomado, w_regwrite, x_pipe_ativo);
@@ -327,15 +335,13 @@ module Decode
   
   	output [31:0] e_sigext, e_pc, //saida para issue 
 	output [4:0] e_inst1, e_inst2, e_inst3, 
-	output [1:0] e_aluop, 
-	output e_alusrc, e_regdst, e_regwrite, e_memread, e_memtoreg, e_memwrite, e_branch
+	output cheio
 );
   
 	wire [31:0] d_sigext; //extensor de sinal desse modulo
 	wire [4:0] rA, rB, rC; 
-	wire [5:0] opcode;
-	wire [1:0] aluop;
-	wire branch, memread, memtoreg, memwrite, regdst, alusrc, permitEscrita, regwrite_out;
+	wire [5:0] opcode_out;
+	wire cheio;
 	
 	
 	assign opcode = inst[31:26]; //opcode
@@ -345,67 +351,150 @@ module Decode
 
 	assign d_sigext = (!rst) ? 32'b0 : {16'b0,inst[15:0]} ; // extensor de sinal extende com zeros e inicializa com 0
 
-	Control control (opcode, //entrada e saidas dos sinais de controle, saidas serao ligadas no modulo superior
-					
-					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
 
 	// IDI
-  IDI idi (clk, rst,stall, regwrite_out, memtoreg, branch, memwrite, memread, regdst, alusrc, aluop, pc, d_sigext, rA, rB, rC,
-			 e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, e_aluop, e_pc, e_sigext, e_inst1, e_inst2, e_inst3);
+  Issue_Queue iq(clk, rst, stall, pc, d_sigext, opcode, rA, rB, rC,
+			 e_pc, e_sigext,opcode_out, e_inst1, e_inst2, e_inst3, cheio);
 
 
 endmodule
 
-module IDI 
+module Issue_Queue
 (
-	input clk, rst,stall, d_regwrite, d_memtoreg, d_branch, d_memwrite, d_memread, d_regdst, d_alusrc, 
-	input [1:0] d_aluop, 
-	input [31:0] d_pc, d_sigext, 
-	input [4:0] d_inst1, d_inst2, d_inst3,
+	input clk, rst, stall,
+	input [31:0] d_pc, d_sigext,  // Imm
+	input [5:0] d_opcode, //adicao de opcode
+	input [4:0] d_inst1, d_inst2, d_inst3, 
 	
-	output reg e_regwrite, e_memtoreg, e_branch, e_memwrite, e_memread, e_regdst, e_alusrc, 
-	output reg [1:0] e_aluop, 
-	output reg [31:0] e_pc, e_sigext, 
-	output reg [4:0] e_inst1, e_inst2, e_inst3
+	output reg [31:0] e_pc, e_sigext, // Imm
+	output reg [5:0] e_opcode, //adicao de opcode
+	output reg [4:0] e_inst1, e_inst2, e_inst3,
+	output cheio
 );
+
+	reg [5:0] 	opcode 	[0:7]; //o IQ tera 8 entradas, 6 bits para o opcode
+	reg [31:0] 	imm 	[0:7]; // 32 bits para sigext == imm
+ 
+	reg [1:0] 	v 		[0:7]; //se o dest eh valido(todas exceto branch e store)
+	reg [4:0] 	dest  	[0:7]; //endDest do banco de regs
+	
+	reg [1:0] 	v1 		[0:7]; //se fonte0 eh valido
+	reg [1:0]	p1 		[0:7];//se fonte0 esta pendente
+	reg [5:0]	fonte1 	[0:7];//end fonte0
+ 
+	reg [1:0]	v2 		[0:7];//se fonte1 eh valido
+	reg [1:0]	p2 		[0:7];//se fonte1 esta pendente
+	reg [5:0] 	fonte2 	[0:7];//end fonte1
+	
+	reg [1:2] indice_inst_antiga; //guarda o indice da entrada
+	reg [1:2] indice_inst_pronta; //guarda o indice da entrada
+	reg [1:2] indice_inst_mais_recente; //guarda o indice da entrada
+	reg [1:2] contador; //se ==7 , esta cheio	
+	
+	assign cheio = (contador == 7) ? 1 : 0;
+	
+//Op: Opcode
+//Imm: Imediato
+//S: bit especulativo
+//V: Válido (Existe no Src e Dest)
+//P: Pendente
 
 	always @(posedge clk) 
 	begin
       if (!rst) 
 		begin
-			e_regwrite <= 0;
-			e_memtoreg <= 0;
-			e_branch   <= 0;
-			e_memwrite <= 0;
-			e_memread  <= 0;
-			e_regdst   <= 0;
-			e_aluop    <= 0;
-			e_alusrc   <= 0;
 			e_pc       <= 0;
 			e_sigext   <= 0;
+			e_opcode   <= 0;
 			e_inst1    <= 0;
 			e_inst2    <= 0;
 			e_inst3    <= 0;
-		end
-      else if(!stall)
-		begin
-			e_regwrite <= d_regwrite;
-			e_memtoreg <= d_memtoreg;
-			e_branch   <= d_branch;
-			e_memwrite <= d_memwrite;
-			e_memread  <= d_memread;
-			e_regdst   <= d_regdst;
-			e_aluop    <= d_aluop;
-			e_alusrc   <= d_alusrc;
-			e_pc       <= d_pc;
-			e_sigext   <= d_sigext;
-			e_inst1    <= d_inst1;
-			e_inst2    <= d_inst2;
-			e_inst3    <= d_inst3;
-		end
-	end
-endmodule
 
+			contador				    <= 0;
+			indice_inst_antiga   		<= 0; 
+			indice_inst_pronta  		<= 0; 
+			indice_inst_mais_recente	<= 0;
+		end
+		else 
+		begin
+			if(!stall)
+			begin
+
+				e_pc       <= d_pc;
+				e_sigext   <= d_sigext;
+				e_inst1    <= d_inst1;
+				e_inst2    <= d_inst2;
+				e_inst3    <= d_inst3;
+			end
+
+			if(!cheio)
+			begin
+				opcode[indice_inst_mais_recente] = d_opcode;
+
+				imm[indice_inst_mais_recente] = d_sigext;
+			
+				v[indice_inst_mais_recente] = ~(d_branch || d_memwrite); //se branch ou store -> dest nao valido
+				dest[indice_inst_mais_recente] = d_inst3; //endDest do banco de regs
+
+				v1[indice_inst_mais_recente]  = 1; //se fonte1 eh valido
+				p1[indice_inst_mais_recente]  = stall;//se fonte1 esta pendente
+				fonte1[indice_inst_mais_recente] = d_inst1;//end fonte1
+		
+				v2[indice_inst_mais_recente]  = 1;//fonte1 eh valido em todos (pois nao tem BEQ por exemplo)
+				p2[indice_inst_mais_recente]  = stall;//se fonte2 esta pendente
+				fonte2[indice_inst_mais_recente] = (opcode == 6'b000001) ? d_inst3 : d_inst2;//apenas opcode define fonte2
+			
+				indice_inst_mais_recente = indice_inst_mais_recente + 1;
+				contador = contador + 1;
+				if(indice_inst_mais_recente == 8)	indice_inst_mais_recente = 0;
+			
+			end
+		
+			//Instrucao Pronta = (!VSrc0 || !PSrc0) && (!VSrc1 || !PSrc1) && Sem Hazard Estrutural
+
+if( (!v1[indice_inst_antiga] || !p1[indice_inst_antiga]) && (!v2[indice_inst_antiga] || !p2[indice_inst_antiga]) && !stall))
+			begin
+				//envia a instrucao para o issue
+				//e_pc       <= ?;
+				e_sigext   <= imm[indice_inst_antiga];
+				e_opcode   <= opcode[indice_inst_antiga];
+				e_inst1    <= fonte1[indice_inst_antiga];
+				e_inst2    <= fonte2[indice_inst_antiga];
+				e_inst3    <= dest[indice_inst_antiga];
+			
+				//atualiza os indices
+				if(indice_inst_antiga == indice_inst_pronta) indice_inst_pronta = indice_inst_pronta + 1;
+				
+				indice_inst_antiga = indice_inst_antiga + 1;
+				
+				if(indice_inst_antiga == 8) indice_inst_antiga = 0;
+				
+				contador = contador - 1;
+
+			end
+			else if((!v1[indice_inst_pronta] || !p1[indice_inst_pronta]) && (!v2[indice_inst_pronta] || !p2[indice_inst_pronta]) && !stall))
+			begin
+				//envia a instrucao para o issue
+				//e_pc       <= ?;
+				e_sigext   <= imm[indice_inst_pronta];
+				e_opcode   <= opcode[indice_inst_pronta];
+				e_inst1    <= fonte1[indice_inst_pronta];
+				e_inst2    <= fonte2[indice_inst_pronta];
+				e_inst3    <= dest[indice_inst_pronta];
+			
+				//atualiza os indices
+				indice_inst_pronta = indice_inst_pronta + 1;
+				
+				if(indice_inst_pronta == 8) indice_inst_pronta = 0;
+
+				contador = contador - 1;					
+			end
+			//else
+			//begin
+		
+			//end	
+		end
+endmodule
 // CONTROL
 module Control 
 (
@@ -532,13 +621,19 @@ endmodule
 
 module Issue 
   (
-	input clk, rst, 
+  
+  	input clk, rst, 
+	input [31:0] i_sigext, i_pc, //dado 1, 2 e sigext, pc, dado a ser escrito no banco de regs
+	input [4:0] i_inst1, i_inst2, i_inst3, //endereco de regs
+	input cheio,
+	
+	/*input clk, rst, 
 	input [31:0] i_sigext, i_pc, //dado 1, 2 e sigext, pc, dado a ser escrito no banco de regs
 	input [4:0] i_inst1, i_inst2, i_inst3, endRegC, //endereco de regs
 	input [31:0] dadoRegC, //resultado das operacoes a ser escrito nos regs
 	input [1:0] i_aluop,
 	input  i_alusrc, i_regdst, i_regwrite, i_memread, i_memtoreg, i_memwrite, i_branch, permitEscrita,
-	
+	*/
 	output [31:0] e_rd1, e_rd2, e_sigext, e_pc, //dado 1, 2 e sigext
 	output [4:0] e_inst1, e_inst2, e_inst3,
     output [1:0] e_aluop, 
@@ -549,6 +644,11 @@ module Issue
 	wire [31:0] i_rd1, i_rd2;
 	
 	wire [2:0] select_execute;
+	
+	Control control (opcode, //entrada e saidas dos sinais de controle, saidas serao ligadas no modulo superior
+					
+					regdst, alusrc, memtoreg, regwrite_out, memread, memwrite, branch, aluop);
+
 	SelectExPipe select_ex_pipe(clk, i_regwrite, i_branch, i_memread, i_memwrite, i_alusrc, i_sigext[4:0], 
 		               select_execute); 
     //scoreboard
